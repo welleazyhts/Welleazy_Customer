@@ -23,7 +23,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { Container } from "react-bootstrap";
 import { insuranceRecordAPI } from "../../api/InsuranceRecord";
-import { RecordType,MemberType } from "../../types/InsuranceRecord";
+import { RecordType, MemberType } from "../../types/InsuranceRecord";
 import { toast } from "react-toastify";
 
 
@@ -81,7 +81,7 @@ const InsuranceRecords: React.FC = () => {
             policyTo: rec.PolicyTo || "-",
             lastUpdateDate: rec.LastUpdateDate || "-",
             lastUpdateTime: rec.LastUpdateTime || "-",
-            status: rec.IsActive === 1? "Active": rec.IsActive === 2? "Expired": "Inactive",
+            status: rec.IsActive === 1 ? "Active" : rec.IsActive === 2 ? "Expired" : "Inactive",
             insuranceType: rec.InsuranceType || null,
             expanded: false,
             details: null,
@@ -107,7 +107,7 @@ const InsuranceRecords: React.FC = () => {
       setSelectedMember(null);
       setShowAllMembers(true);
       setFilteredRecords(records);
-      
+
       // Reset all members' active state
       setMembers(prev => prev.map(member => ({
         ...member,
@@ -117,13 +117,13 @@ const InsuranceRecords: React.FC = () => {
       // Filter records by selected member
       setSelectedMember(memberName);
       setShowAllMembers(false);
-      const filtered = records.filter(record => 
+      const filtered = records.filter(record =>
         record.member.toLowerCase().includes(memberName.toLowerCase()) ||
         memberName.toLowerCase().includes(record.member.toLowerCase())
       );
       setFilteredRecords(filtered);
       setCurrentPage(1); // Reset to first page
-      
+
       // Update members active state
       setMembers(prev => prev.map(member => ({
         ...member,
@@ -137,7 +137,7 @@ const InsuranceRecords: React.FC = () => {
     setSelectedMember(null);
     setShowAllMembers(true);
     setFilteredRecords(records);
-    
+
     // Reset all members' active state
     setMembers(prev => prev.map(member => ({
       ...member,
@@ -159,11 +159,11 @@ const InsuranceRecords: React.FC = () => {
   };
 
   const handleAddRecord = () => navigate("/insurance-records/add");
-  
+
   const handleEditRecord = (insuranceId: number) => {
     navigate(`/insurance-records/add?insuranceId=${insuranceId}`);
   };
-  
+
   const handleGroupDetailsClick = () =>
     navigate("/insurance-records/view-documents");
 
@@ -171,7 +171,7 @@ const InsuranceRecords: React.FC = () => {
   const handleDelete = async (index: number) => {
     const recordIndex = indexOfFirstRecord + index;
     const recordToDelete = filteredRecords[recordIndex];
-    
+
     // Ask for confirmation
     const isConfirmed = window.confirm(`Are you sure you want to delete the insurance record for ${recordToDelete.member}?`);
     if (!isConfirmed) return;
@@ -180,7 +180,7 @@ const InsuranceRecords: React.FC = () => {
       // Get the createdBy value from localStorage
       const loginRefId = localStorage.getItem("LoginRefId") || "0";
       const createdBy = parseInt(loginRefId);
-      
+
       // Call API to deactivate/delete the record
       const response = await insuranceRecordAPI.CRMCustomerInsuranceEmployeeDeactive(
         recordToDelete.id,
@@ -189,11 +189,11 @@ const InsuranceRecords: React.FC = () => {
 
       if (response?.Message || response?.message) {
         toast.success(response.Message || response.message || "Record deleted successfully");
-        
+
         // Update both records arrays after successful API call
         const updatedRecords = records.filter(record => record.id !== recordToDelete.id);
         const updatedFilteredRecords = filteredRecords.filter(record => record.id !== recordToDelete.id);
-        
+
         setRecords(updatedRecords);
         setFilteredRecords(updatedFilteredRecords);
       } else {
@@ -206,41 +206,41 @@ const InsuranceRecords: React.FC = () => {
   };
 
   //Fetch Details by ID when expanded
-// In your InsuranceRecords.tsx file, update the handleToggleExpand function:
-const handleToggleExpand = async (index: number) => {
-  const recordIndex = indexOfFirstRecord + index;
-  const record = filteredRecords[recordIndex];
+  // In your InsuranceRecords.tsx file, update the handleToggleExpand function:
+  const handleToggleExpand = async (index: number) => {
+    const recordIndex = indexOfFirstRecord + index;
+    const record = filteredRecords[recordIndex];
 
-  if (record.expanded) {
-    setFilteredRecords(prev =>
-      prev.map((r, i) =>
-        i === recordIndex ? { ...r, expanded: false } : r
-      )
-    );
-    return;
-  }
+    if (record.expanded) {
+      setFilteredRecords(prev =>
+        prev.map((r, i) =>
+          i === recordIndex ? { ...r, expanded: false } : r
+        )
+      );
+      return;
+    }
 
-  try {
-    setLoadingId(record.id);
+    try {
+      setLoadingId(record.id);
 
-    const response = await insuranceRecordAPI.CRMGetCustomerInsuranceRecordDetailsById(record.id);
+      const response = await insuranceRecordAPI.CRMGetCustomerInsuranceRecordDetailsById(record.id);
 
-    const details = response["Insurance Records Details"]?.[0] || null;
-    const documents = response["Insurance Records Documnets"] || []; // Note: API returns "Documnets" (typo)
+      const details = response["Insurance Records Details"]?.[0] || null;
+      const documents = response["Insurance Records Documnets"] || []; // Note: API returns "Documnets" (typo)
 
-    setFilteredRecords(prev =>
-      prev.map((r, i) =>
-        i === recordIndex
-          ? { ...r, expanded: true, details, documents }
-          : { ...r, expanded: false }
-      )
-    );
-  } catch (error) {
-    console.error("Failed to fetch record details:", error);
-  } finally {
-    setLoadingId(null);
-  }
-};
+      setFilteredRecords(prev =>
+        prev.map((r, i) =>
+          i === recordIndex
+            ? { ...r, expanded: true, details, documents }
+            : { ...r, expanded: false }
+        )
+      );
+    } catch (error) {
+      console.error("Failed to fetch record details:", error);
+    } finally {
+      setLoadingId(null);
+    }
+  };
 
   const locationData = [
     { name: "New Delhi", img: "/DELHI-8.png" },
@@ -284,34 +284,34 @@ const handleToggleExpand = async (index: number) => {
   };
 
 
-const downloadDocument = async (insuranceRecordDocumentId: number,fileName?: string) => {
-  try {
-    const response = await fetch(
-      `https://api.welleazy.com/Insurance/DownloadInsuranceDocument/${insuranceRecordDocumentId}`,
-      {
-        method: "GET",
+  const downloadDocument = async (insuranceRecordDocumentId: number, fileName?: string) => {
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL || "http://3.110.32.224"}/Insurance/DownloadInsuranceDocument/${insuranceRecordDocumentId}`,
+        {
+          method: "GET",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Download failed");
       }
-    );
 
-    if (!response.ok) {
-      throw new Error("Download failed");
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName || "document";
+      document.body.appendChild(a);
+      a.click();
+
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error downloading document:", error);
     }
-
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = fileName || "document";
-    document.body.appendChild(a);
-    a.click();
-
-    a.remove();
-    window.URL.revokeObjectURL(url);
-  } catch (error) {
-    console.error("Error downloading document:", error);
-  }
-};
+  };
 
 
 
@@ -344,7 +344,7 @@ const downloadDocument = async (insuranceRecordDocumentId: number,fileName?: str
               <div className="ins-active-filter">
                 <FontAwesomeIcon icon={faFilter} style={{ marginRight: "6px" }} />
                 Showing records for: <strong>{selectedMember}</strong>
-                <button 
+                <button
                   className="ins-clear-filter-btn"
                   onClick={handleShowAll}
                 >
@@ -356,7 +356,7 @@ const downloadDocument = async (insuranceRecordDocumentId: number,fileName?: str
         </div>
         <div className="ins-members-row" ref={membersRowRef}>
           {members.map((member, idx) => (
-            <div 
+            <div
               className={`ins-member-card ${member.isActive ? 'active' : ''}`}
               key={idx}
               onClick={() => handleMemberClick(member.name)}
@@ -401,7 +401,7 @@ const downloadDocument = async (insuranceRecordDocumentId: number,fileName?: str
             </div>
             {selectedMember && (
               <div className="ins-stat-item">
-                <button 
+                <button
                   className="ins-clear-filter-btn-small"
                   onClick={handleShowAll}
                 >
@@ -434,7 +434,7 @@ const downloadDocument = async (insuranceRecordDocumentId: number,fileName?: str
               <div className="ins-empty-state">
                 <FontAwesomeIcon icon={faFileAlt} size="3x" />
                 <p>
-                  {selectedMember 
+                  {selectedMember
                     ? `No insurance records found for ${selectedMember}`
                     : "No insurance records found"
                   }
@@ -443,7 +443,7 @@ const downloadDocument = async (insuranceRecordDocumentId: number,fileName?: str
                   Add Your First Record
                 </button>
                 {selectedMember && (
-                  <button 
+                  <button
                     className="ins-clear-filter-btn"
                     onClick={handleShowAll}
                     style={{ marginTop: '10px' }}
@@ -493,36 +493,36 @@ const downloadDocument = async (insuranceRecordDocumentId: number,fileName?: str
                     </div>
                     <div className="ins-table-cell">
                       <div className={`ins-status-cell ${rec.status === "Active" ? "active" : "inactive"}`}>
-                        <FontAwesomeIcon 
-                          icon={rec.status === "Active" ? faCheckCircle : faTimesCircle} 
+                        <FontAwesomeIcon
+                          icon={rec.status === "Active" ? faCheckCircle : faTimesCircle}
                           style={{ marginRight: "6px" }}
                         />
                         {rec.status}
                       </div>
                     </div>
                     <div className="ins-table-cell ins-actions-cell">
-                      <button 
+                      <button
                         className="ins-action-icon-btn"
                         onClick={() => handleToggleExpand(idx)}
                         title="View Details"
                       >
                         <FontAwesomeIcon icon={rec.expanded ? faChevronUp : faChevronDown} />
                       </button>
-                      <button 
+                      <button
                         className="ins-action-icon-btn edit"
                         onClick={() => handleEditRecord(rec.id)}
                         title="Edit Record"
                       >
                         <FontAwesomeIcon icon={faEdit} />
                       </button>
-                      <button 
+                      <button
                         className="ins-action-icon-btn delete"
                         onClick={() => handleDelete(idx)}
                         title="Delete Record"
                       >
                         <FontAwesomeIcon icon={faTrash} />
                       </button>
-                     
+
                     </div>
                   </div>
 
@@ -550,7 +550,7 @@ const downloadDocument = async (insuranceRecordDocumentId: number,fileName?: str
                               <span className="ins-detail-value">{rec.details.PolicyName || "-"}</span>
                             </div>
                           </div>
-                          
+
                           <div className="ins-detail-card">
                             <h4>Coverage Details</h4>
                             <div className="ins-detail-row">
@@ -568,10 +568,10 @@ const downloadDocument = async (insuranceRecordDocumentId: number,fileName?: str
                               <span className="ins-detail-value">{rec.details.PremiumAmount || "-"}</span>
                             </div>
                           </div>
-                          
+
                           <div className="ins-detail-card">
                             <h4>Additional Information</h4>
-                            <div className="ins-detail-row" style={{whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>
+                            <div className="ins-detail-row" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               <span className="ins-detail-label">Insurance Company:</span>
                               <span className="ins-detail-value">{rec.details.InsuranceCompanyName || rec.insurer || "-"}</span>
                             </div>
@@ -586,90 +586,90 @@ const downloadDocument = async (insuranceRecordDocumentId: number,fileName?: str
                           </div>
 
 
-<div className="ins-detail-card">
-  <h4>Documents</h4>
-  {rec.documents && rec.documents.length > 0 ? (
-    rec.documents.map((doc, index) => (
-      <div
-        key={doc.InsuranceRecordDocumentId || index}
-        className="ins-detail-row"
-      >
-        <span 
-          className="ins-detail-label" 
-          style={{
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            maxWidth: "200px"
-          }}
-        >
-          {doc.DocumentName || `Document ${index + 1}`}
-        </span>
-        <span 
-          className="ins-detail-value" 
-          style={{
-            display: 'flex',
-            gap: '10px',
-            alignItems: 'center'
-          }}
-        >
-          {/* View Button - Opens in new tab */}
-          <a
-            href={doc.DocumentPath}
-            target="_blank"
-            rel="noopener noreferrer"
-            className=""
-            style={{
-              backgroundColor: '#1890ff',
-              color: 'white',
-              padding: '6px 12px',
-              borderRadius: '4px',
-              textDecoration: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-            title="View Document (opens in new tab)"
-          >
-            <FontAwesomeIcon icon={faEye} />
-            View
-          </a>
+                          <div className="ins-detail-card">
+                            <h4>Documents</h4>
+                            {rec.documents && rec.documents.length > 0 ? (
+                              rec.documents.map((doc, index) => (
+                                <div
+                                  key={doc.InsuranceRecordDocumentId || index}
+                                  className="ins-detail-row"
+                                >
+                                  <span
+                                    className="ins-detail-label"
+                                    style={{
+                                      whiteSpace: "nowrap",
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      maxWidth: "200px"
+                                    }}
+                                  >
+                                    {doc.DocumentName || `Document ${index + 1}`}
+                                  </span>
+                                  <span
+                                    className="ins-detail-value"
+                                    style={{
+                                      display: 'flex',
+                                      gap: '10px',
+                                      alignItems: 'center'
+                                    }}
+                                  >
+                                    {/* View Button - Opens in new tab */}
+                                    <a
+                                      href={doc.DocumentPath}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className=""
+                                      style={{
+                                        backgroundColor: '#1890ff',
+                                        color: 'white',
+                                        padding: '6px 12px',
+                                        borderRadius: '4px',
+                                        textDecoration: 'none',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px'
+                                      }}
+                                      title="View Document (opens in new tab)"
+                                    >
+                                      <FontAwesomeIcon icon={faEye} />
+                                      View
+                                    </a>
 
-          {/* Download Button - Direct download */}
-          <a
-            href={doc.DocumentPath}
-            download
-            className=""
-            style={{
-              backgroundColor: '#52c41a',
-              color: 'white',
-              padding: '6px 12px',
-              borderRadius: '4px',
-              textDecoration: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              cursor: 'pointer'
-            }}
-            title="Download Document"
-           onClick={() =>downloadDocument(doc.InsuranceRecordDocumentId)
-            }
-          >
-            <FontAwesomeIcon icon={faDownload} />
-            Download
-          </a>
-        </span>
-      </div>
-    ))
-  ) : (
-    <div className="ins-detail-row">
-      <span className="ins-detail-value" style={{ color: '#999' }}>
-        No documents available
-      </span>
-    </div>
-  )}
-</div>
-                          
+                                    {/* Download Button - Direct download */}
+                                    <a
+                                      href={doc.DocumentPath}
+                                      download
+                                      className=""
+                                      style={{
+                                        backgroundColor: '#52c41a',
+                                        color: 'white',
+                                        padding: '6px 12px',
+                                        borderRadius: '4px',
+                                        textDecoration: 'none',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        cursor: 'pointer'
+                                      }}
+                                      title="Download Document"
+                                      onClick={() => downloadDocument(doc.InsuranceRecordDocumentId)
+                                      }
+                                    >
+                                      <FontAwesomeIcon icon={faDownload} />
+                                      Download
+                                    </a>
+                                  </span>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="ins-detail-row">
+                                <span className="ins-detail-value" style={{ color: '#999' }}>
+                                  No documents available
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
                           <div className="ins-detail-card full-width">
                             <h4>Notes</h4>
                             <div className="ins-notes">
@@ -705,32 +705,32 @@ const downloadDocument = async (insuranceRecordDocumentId: number,fileName?: str
                   <FontAwesomeIcon icon={faChevronLeft} />
                   Prev
                 </button>
-                
+
                 <div className="ins-pagination-numbers">
                   {(() => {
                     const pages: (number | string)[] = [];
                     const maxVisible = 5;
                     let startPage = Math.max(1, currentPage - 2);
                     let endPage = Math.min(totalPages, startPage + maxVisible - 1);
-                    
+
                     if (endPage - startPage + 1 < maxVisible) {
                       startPage = Math.max(1, endPage - maxVisible + 1);
                     }
-                    
+
                     if (startPage > 1) {
                       pages.push(1);
                       if (startPage > 2) pages.push("...");
                     }
-                    
+
                     for (let i = startPage; i <= endPage; i++) {
                       pages.push(i);
                     }
-                    
+
                     if (endPage < totalPages) {
                       if (endPage < totalPages - 1) pages.push("...");
                       pages.push(totalPages);
                     }
-                    
+
                     return pages.map((page, i) =>
                       page === "..." ? (
                         <span key={`ellipsis-${i}`} className="ins-pagination-ellipsis">
@@ -748,7 +748,7 @@ const downloadDocument = async (insuranceRecordDocumentId: number,fileName?: str
                     );
                   })()}
                 </div>
-                
+
                 <button
                   className="ins-pagination-btn"
                   disabled={currentPage === totalPages}

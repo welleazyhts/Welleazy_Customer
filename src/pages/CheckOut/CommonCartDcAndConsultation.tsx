@@ -37,11 +37,11 @@ const CommonCartDcAndConsultation: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   // Modal states
   const [showModal, setShowModal] = useState(false);
   const [selectedItemForReschedule, setSelectedItemForReschedule] = useState<AppointmentItem | null>(null);
-  
+
   // Calendar and time slot states
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTimePeriod, setSelectedTimePeriod] = useState<string>('morning');
@@ -60,11 +60,11 @@ const CommonCartDcAndConsultation: React.FC = () => {
           const cartKey = `app_cart_${employeeRefId}`;
           const storedCart = JSON.parse(localStorage.getItem(cartKey) || '[]');
           const appointmentItems = storedCart.filter((item: any) => item.type === 'appointment');
-          
+
           if (appointmentItems.length === 0) {
             toast.info("No appointments found in your cart");
           }
-          
+
           setAppointmentItems(appointmentItems);
         }
       } catch (error) {
@@ -87,13 +87,13 @@ const CommonCartDcAndConsultation: React.FC = () => {
   const handleRemoveItem = (id: string) => {
     const updatedItems = appointmentItems.filter(item => item.id !== id);
     setAppointmentItems(updatedItems);
-    
+
     const employeeRefId = localStorage.getItem("EmployeeRefId") || "0";
     const cartKey = `app_cart_${employeeRefId}`;
     const storedCart = JSON.parse(localStorage.getItem(cartKey) || '[]');
     const nonAppointmentItems = storedCart.filter((item: any) => item.type !== 'appointment');
     const updatedCart = [...nonAppointmentItems, ...updatedItems];
-    
+
     localStorage.setItem(cartKey, JSON.stringify(updatedCart));
     toast.success("Item removed from cart");
     window.dispatchEvent(new CustomEvent('cartUpdated'));
@@ -108,12 +108,12 @@ const CommonCartDcAndConsultation: React.FC = () => {
       toast.error("No appointments in cart");
       return;
     }
-    
-    const cartUniqueId = appointmentItems[0]?.cartUniqueId || 
-                        parseInt(localStorage.getItem("CartUniqueId") || "0");
-    
+
+    const cartUniqueId = appointmentItems[0]?.cartUniqueId ||
+      parseInt(localStorage.getItem("CartUniqueId") || "0");
+
     const employeeRefId = parseInt(localStorage.getItem("EmployeeRefId") || "0");
-    
+
     navigate("/CheckOut", {
       state: {
         cartUniqueId: cartUniqueId,
@@ -125,11 +125,11 @@ const CommonCartDcAndConsultation: React.FC = () => {
 
   const formatTo12Hour = (dateTime: string): string => {
     if (!dateTime) return "Not Scheduled";
-    
+
     try {
       const [datePart, timePart] = dateTime.split(" ");
       if (!datePart || !timePart) return dateTime;
-      
+
       const [year, month, day] = datePart.split("-");
       let [hours, minutes, seconds] = timePart.split(":").map(Number);
 
@@ -158,15 +158,15 @@ const CommonCartDcAndConsultation: React.FC = () => {
     setLoadingTimeSlots(true);
     setSelectedTimeSlot(null);
     setSelectedTime('');
-    
+
     try {
       // Format date as YYYY-MM-DD
       const formattedDate = selectedDate.toISOString().split('T')[0];
-      
+
       // Map time period to time zone value
       let timeZoneValue = 1; // Default to morning
-      
-      switch(selectedTimePeriod) {
+
+      switch (selectedTimePeriod) {
         case 'morning':
           timeZoneValue = 1;
           break;
@@ -182,16 +182,17 @@ const CommonCartDcAndConsultation: React.FC = () => {
         default:
           timeZoneValue = 1;
       }
-      
-      
-      const requestData = {
+
+
+      const requestData: TimeSlotRequest = {
         DCUniqueName: selectedItemForReschedule.DCSelection || "",
-        DoctorId: selectedItemForReschedule.DoctorId || 0,
+        doctorId: selectedItemForReschedule.DoctorId || 0,
         TimeZone: timeZoneValue,
+        Date: formattedDate,
       };
-      const response = await ConsultationAPI.CRMLoadTimeSlots(requestData);    
+      const response = await ConsultationAPI.CRMLoadTimeSlots(requestData);
       console.log('Time slots response:', response);
-      
+
       if (Array.isArray(response)) {
         setTimeSlots(response);
         console.log('Time slots loaded:', response.length);
@@ -218,7 +219,7 @@ const CommonCartDcAndConsultation: React.FC = () => {
 
   const handleOpenRescheduleModal = (item: AppointmentItem) => {
     setSelectedItemForReschedule(item);
-    
+
     if (item.appointmentTime) {
       try {
         const date = new Date(item.appointmentTime);
@@ -229,7 +230,7 @@ const CommonCartDcAndConsultation: React.FC = () => {
         console.error('Error parsing date:', error);
       }
     }
-    
+
     setShowModal(true);
   };
 
@@ -244,13 +245,13 @@ const CommonCartDcAndConsultation: React.FC = () => {
   const convert12to24 = (time12h: string): string => {
     const [time, modifier] = time12h.split(' ');
     let [hours, minutes] = time.split(':').map(Number);
-    
+
     if (modifier.toUpperCase() === 'PM' && hours !== 12) {
       hours += 12;
     } else if (modifier.toUpperCase() === 'AM' && hours === 12) {
       hours = 0;
     }
-    
+
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
   };
 
@@ -262,28 +263,28 @@ const CommonCartDcAndConsultation: React.FC = () => {
 
     try {
       // Format date as YYYY-MM-DD
-      const dateStr = selectedDate.toISOString().split('T')[0];  
-      
+      const dateStr = selectedDate.toISOString().split('T')[0];
+
       console.log('Selected time slot for reschedule:', selectedTimeSlot);
       console.log('Selected date:', dateStr);
-      
+
       // Convert the selected time slot to 24-hour format for backend
       const time24Hour = convert12to24(selectedTimeSlot.Time);
       const newDateTime = `${dateStr} ${time24Hour}`;
-      
+
       // For display, keep the 12-hour format
       const displayDateTime = `${dateStr} ${selectedTimeSlot.Time}`;
-      
+
       console.log('24-hour time:', time24Hour);
       console.log('New date time (backend):', newDateTime);
       console.log('Display date time:', displayDateTime);
-      
+
       const employeeRefId = parseInt(localStorage.getItem("EmployeeRefId") || "0");
-      
+
       // Update localStorage
       const cartKey = `app_cart_${employeeRefId}`;
       const storedCart = JSON.parse(localStorage.getItem(cartKey) || '[]');
-      
+
       const updatedCart = storedCart.map((item: any) => {
         if (item.id === selectedItemForReschedule.id) {
           const updatedItem = {
@@ -292,12 +293,12 @@ const CommonCartDcAndConsultation: React.FC = () => {
             appointmentDate: dateStr,
             AppointmentDateTime: newDateTime // Store in 24-hour format
           };
-          
+
           // Try to update backend if we have the necessary IDs
           if (item.caseLeadId || item.CaseRefId) {
             const caseLeadId = item.caseLeadId || item.CaseRefId;
             const cartDetailsId = item.cartDetailsId || item.CartDetailsId || 0;
-        
+
             const customerCartDetailsPayload = {
               CaseleadId: caseLeadId.toString(),
               AppointmentDateTime: newDateTime,
@@ -308,9 +309,9 @@ const CommonCartDcAndConsultation: React.FC = () => {
               DCSelection: "",
               TestPackageCode: ""
             };
-            
+
             console.log('API Payload for backend update:', customerCartDetailsPayload);
-            
+
             // Make API call
             ConsultationAPI.CRMSaveCustomerCartDetails(customerCartDetailsPayload)
               .then((response) => {
@@ -320,31 +321,31 @@ const CommonCartDcAndConsultation: React.FC = () => {
                 console.error('Failed to update backend:', err);
               });
           }
-          
+
           return updatedItem;
         }
         return item;
       });
-      
+
       localStorage.setItem(cartKey, JSON.stringify(updatedCart));
-      
+
       // Update state - store in 24-hour format but display will use formatTo12Hour
-      const updatedItems = appointmentItems.map(item => 
-        item.id === selectedItemForReschedule.id 
-          ? { 
-              ...item, 
-              appointmentTime: newDateTime, // Store in 24-hour format
-              appointmentDate: dateStr,
-              AppointmentDateTime: newDateTime
-            }
+      const updatedItems = appointmentItems.map(item =>
+        item.id === selectedItemForReschedule.id
+          ? {
+            ...item,
+            appointmentTime: newDateTime, // Store in 24-hour format
+            appointmentDate: dateStr,
+            AppointmentDateTime: newDateTime
+          }
           : item
       );
       setAppointmentItems(updatedItems);
-      
+
       toast.success("Appointment rescheduled successfully!");
       handleCloseModal();
       window.dispatchEvent(new CustomEvent('cartUpdated'));
-      
+
     } catch (error) {
       console.error('Error rescheduling appointment:', error);
       toast.error("Failed to reschedule appointment");
@@ -355,16 +356,16 @@ const CommonCartDcAndConsultation: React.FC = () => {
     try {
       const now = new Date();
       const slotDateTime = new Date(selectedDate);
-      
+
       if (timeSlot.Time) {
         const time24Hour = convert12to24(timeSlot.Time);
         const [hoursStr, minutesStr] = time24Hour.split(':');
         const hours = parseInt(hoursStr);
         const minutes = parseInt(minutesStr);
-        
+
         slotDateTime.setHours(hours, minutes, 0, 0);
       }
-      
+
       return slotDateTime < now;
     } catch (error) {
       console.error('Error checking if time slot expired:', error);
@@ -375,12 +376,12 @@ const CommonCartDcAndConsultation: React.FC = () => {
   const filterTimeSlotsByPeriod = (slots: TimeSlotResponse[]) => {
     return slots.filter(slot => {
       if (!slot.Time) return false;
-      
+
       // Convert to 24-hour format for filtering
       const time24Hour = convert12to24(slot.Time);
       const [hoursStr] = time24Hour.split(':');
       const hours = parseInt(hoursStr);
-      
+
       switch (selectedTimePeriod) {
         case 'morning':
           return hours >= 6 && hours < 12;
@@ -440,7 +441,7 @@ const CommonCartDcAndConsultation: React.FC = () => {
               </h3>
               <button className="modal-close-btn" onClick={handleCloseModal}>×</button>
             </div>
-            
+
             <div className="modal-body">
               <div className="calendar-time-layout">
                 <div className="calendar-side">
@@ -464,10 +465,10 @@ const CommonCartDcAndConsultation: React.FC = () => {
                 </div>
 
                 {/* Time Slots Side */}
-                <div className="time-slots-side" style={{height:'70%'}}>
+                <div className="time-slots-side" style={{ height: '70%' }}>
                   <div className="time-selection-section">
                     <h4 className="time-section-title">Select Time Slot</h4>
-                    
+
                     {/* Time Period Tabs */}
                     <div className="time-period-tabs">
                       <button
@@ -508,19 +509,17 @@ const CommonCartDcAndConsultation: React.FC = () => {
                           <p>Loading available slots...</p>
                         </div>
                       ) : timeSlots && Array.isArray(timeSlots) && timeSlots.length > 0 ? (
-                        filterTimeSlotsByPeriod(timeSlots).map((timeSlot, index) => {
+                        timeSlots.map((timeSlot, index) => {
                           const dateToUse = selectedDate || new Date();
                           const isExpired = isTimeSlotExpired(timeSlot, dateToUse);
                           const isSelected = selectedTimeSlot?.TimeId === timeSlot.TimeId;
-                          
+
                           return (
                             <button
                               key={timeSlot.TimeId || index}
-                              className={`time-slot-btn ${
-                                isSelected ? 'active' : ''
-                              } ${
-                                isExpired ? 'expired' : ''
-                              }`}
+                              className={`time-slot-btn ${isSelected ? 'active' : ''
+                                } ${isExpired ? 'expired' : ''
+                                }`}
                               onClick={() => handleTimeSlotSelect(timeSlot)}
                               disabled={isExpired}
                               title={isExpired ? 'This time slot has expired' : `Select ${timeSlot.Time}`}
@@ -540,26 +539,26 @@ const CommonCartDcAndConsultation: React.FC = () => {
                 </div>
               </div>
             </div>
-            
-           <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '15px' }}>
-              <button 
-                className="modal-btn cancel-btn" 
+
+            <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '15px' }}>
+              <button
+                className="modal-btn cancel-btn"
                 onClick={handleCloseModal}
                 style={{ padding: '10px 20px', background: '#f0f0f0', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
               >
                 Cancel
               </button>
-              <button 
-                className="btn-primary-confirmbooking-consultation" 
+              <button
+                className="btn-primary-confirmbooking-consultation"
                 onClick={handleConfirmReschedule}
                 disabled={!selectedTimeSlot}
-                style={{ 
-                  padding: '10px 20px', 
-                  background: !selectedTimeSlot ? '#cccccc' : '#f57c00', 
-                  color: 'white', 
-                  border: 'none', 
-                  borderRadius: '4px', 
-                  cursor: !selectedTimeSlot ? 'not-allowed' : 'pointer' 
+                style={{
+                  padding: '10px 20px',
+                  background: !selectedTimeSlot ? '#cccccc' : '#f57c00',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: !selectedTimeSlot ? 'not-allowed' : 'pointer'
                 }}
               >
                 Confirm Reschedule
@@ -637,10 +636,10 @@ const CommonCartDcAndConsultation: React.FC = () => {
                       {item.doctorSpeciality && ` - ${item.doctorSpeciality}`}
                     </div>
                   )}
-                  <div 
-                    style={{ 
-                      fontSize: "13px", 
-                      color: "#f57c00", 
+                  <div
+                    style={{
+                      fontSize: "13px",
+                      color: "#f57c00",
                       marginTop: "4px",
                       cursor: "pointer",
                       textDecoration: "underline"
@@ -656,7 +655,7 @@ const CommonCartDcAndConsultation: React.FC = () => {
                 <span style={{ fontWeight: 600, fontSize: "18px" }}>
                   {formatPrice(item.price)}
                 </span>
-                <span 
+                <span
                   style={{ fontSize: "20px", cursor: "pointer", color: "#ff4444" }}
                   onClick={() => handleRemoveItem(item.id)}
                 >
@@ -694,7 +693,7 @@ const CommonCartDcAndConsultation: React.FC = () => {
           disabled={appointmentItems.length === 0}
           style={{
             padding: "10px 24px",
-            background: appointmentItems.length > 0 
+            background: appointmentItems.length > 0
               ? "linear-gradient(to right, #f57c00, #fb8c00)"
               : "#cccccc",
             border: "none",

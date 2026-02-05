@@ -1,9 +1,10 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://3.110.32.224';
+const API_URL = process.env.REACT_APP_API_URL || 'http://3.110.32.224:8000';
 
 export const api = axios.create({
     baseURL: API_URL,
+    withCredentials: true, // Enable cookies for session management
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',

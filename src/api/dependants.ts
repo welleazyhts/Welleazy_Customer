@@ -5,7 +5,7 @@ import {
 } from '../types/dependants';
 
 
-const API_URL = "http://3.110.32.224";
+const API_URL = process.env.REACT_APP_API_URL || "http://3.110.32.224:8000";
 
 export const DependantsAPI = {
 
@@ -79,7 +79,28 @@ export const DependantsAPI = {
         rawData = (response.data as any).results;
       }
 
-      return rawData as CRMFetchDependentDetailsForEmployeeResponse[];
+      // Map the new API response structure to the frontend interface
+      return rawData.map((item: any) => ({
+        EmployeeDependentDetailsId: item.id || item.EmployeeDependentDetailsId,
+        DependentName: item.name || item.DependentName,
+        DependentRelationShip: item.relationship || item.DependentRelationShip,
+        DependentMemberId: item.member_id || item.DependentMemberId,
+        DependentGender: item.gender ? parseInt(item.gender.toString()) : (item.DependentGender || 0),
+        DependentDOB: item.dob || item.DependentDOB,
+        DependentMobileNo: item.mobile_number || item.DependentMobileNo || "",
+        DependentEmailId: item.email || item.DependentEmailId || "",
+        IsActive: item.is_active !== undefined ? item.is_active : (item.IsActive || true),
+        // Add other required fields with defaults if missing
+        EmployeeId: item.employee || item.EmployeeId || 0,
+        DependentId: item.DependentId || "",
+        Relationship: item.relationship_name || "", // Assuming backend might send this, or we handle name retrieval elsewhere
+        Description: "",
+        DOB: item.dob || item.DependentDOB,
+        AccessProfilePermission: false,
+        MaritalStatus: item.marital_status ? parseInt(item.marital_status.toString()) : 0,
+        Occupation: 0
+      })) as CRMFetchDependentDetailsForEmployeeResponse[];
+
     } catch (error) {
       console.error('Error fetching dependents:', error);
       throw error;
@@ -88,20 +109,40 @@ export const DependantsAPI = {
 
   CRMFetchDependentDetailsForEmployee: async (requestData: CRMFetchDependentDetailsForEmployeeRequest): Promise<CRMFetchDependentDetailsForEmployeeResponse[]> => {
     try {
-      const response = await fetch(`${API_URL}/CRMFetchDependentDetailsForEmployee`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestData),
-      });
+      // Replaced old POST endpoint with new GET endpoint /api/dependants/
+      const response = await api.get('/api/dependants/');
+      console.log("CRMFetchDependentDetailsForEmployee Response:", response.data);
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      let rawData: any[] = [];
+      if (Array.isArray(response.data)) {
+        rawData = response.data;
+      } else if (response.data && Array.isArray((response.data as any).data)) {
+        rawData = (response.data as any).data;
+      } else if (response.data && Array.isArray((response.data as any).results)) {
+        rawData = (response.data as any).results;
       }
 
-      const data: CRMFetchDependentDetailsForEmployeeResponse[] = await response.json();
-      return data;
+      // Map the new API response structure to the frontend interface
+      return rawData.map((item: any) => ({
+        EmployeeDependentDetailsId: item.id || item.EmployeeDependentDetailsId,
+        DependentName: item.name || item.DependentName,
+        DependentRelationShip: item.relationship || item.DependentRelationShip,
+        DependentMemberId: item.member_id || item.DependentMemberId,
+        DependentGender: item.gender ? parseInt(item.gender.toString()) : (item.DependentGender || 0),
+        DependentDOB: item.dob || item.DependentDOB,
+        DependentMobileNo: item.mobile_number || item.DependentMobileNo || "",
+        DependentEmailId: item.email || item.DependentEmailId || "",
+        IsActive: item.is_active !== undefined ? item.is_active : (item.IsActive || true),
+        EmployeeId: item.employee || item.EmployeeId || 0,
+        DependentId: item.DependentId || "",
+        Relationship: item.relationship_name || "",
+        Description: "",
+        DOB: item.dob || item.DependentDOB,
+        AccessProfilePermission: false,
+        MaritalStatus: item.marital_status ? parseInt(item.marital_status.toString()) : 0,
+        Occupation: 0
+      })) as CRMFetchDependentDetailsForEmployeeResponse[];
+
     } catch (error) {
       console.error('Error fetching dependent details for employee:', error);
       throw error;
@@ -149,21 +190,23 @@ export const DependantsAPI = {
 
       const data = await response.json();
 
-      // Map response to District interface
-      // If the data is just a list of strings, we map it:
+      let rawData: any[] = [];
       if (Array.isArray(data)) {
-        if (typeof data[0] === 'string') {
-          return data.map((city: string, index: number) => ({
-            DistrictId: index,
-            DistrictName: city,
-            StateId: 0,
-            StateName: "",
-            IsActive: "true",
-            CityType: null
-          }));
-        }
+        rawData = data;
+      } else if (data && Array.isArray((data as any).data)) {
+        rawData = (data as any).data;
+      } else if (data && Array.isArray((data as any).results)) {
+        rawData = (data as any).results;
       }
-      return data as District[];
+
+      return rawData.map((item: any, index: number) => ({
+        DistrictId: item.id || item.DistrictId || index,
+        DistrictName: item.name || item.DistrictName || (typeof item === 'string' ? item : ""),
+        StateId: item.state || item.StateId || 0,
+        StateName: item.state_name || item.StateName || "",
+        IsActive: item.is_active !== undefined ? String(item.is_active) : (item.IsActive || "true"),
+        CityType: item.CityType || null
+      })) as District[];
 
     } catch (error) {
       console.error('Error fetching districts:', error);

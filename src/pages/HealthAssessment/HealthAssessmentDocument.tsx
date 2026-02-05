@@ -86,20 +86,20 @@ interface HealthAssessmentDocumentProps {
 
 type HRAOutputDetailsRequest = import('../../types/HealthAssessment').HRAOutputDetailsRequest;
 
-const HealthAssessmentDocument: React.FC<HealthAssessmentDocumentProps> = ({ 
-  assessmentData: propAssessmentData, 
-  onClose 
+const HealthAssessmentDocument: React.FC<HealthAssessmentDocumentProps> = ({
+  assessmentData: propAssessmentData,
+  onClose
 }) => {
   const [assessmentData, setAssessmentData] = useState<AssessmentData | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [hrageneralDetailsId, setHrageneralDetailsId] = useState<string>("");
-  
+
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
     let id = "";
-    
+
     if (location.state && location.state.hrageneralDetailsId) {
       id = location.state.hrageneralDetailsId.toString();
     } else {
@@ -108,9 +108,9 @@ const HealthAssessmentDocument: React.FC<HealthAssessmentDocumentProps> = ({
         id = storedId;
       }
     }
-    
+
     setHrageneralDetailsId(id);
-    
+
     if (propAssessmentData) {
       setAssessmentData(propAssessmentData);
     } else {
@@ -144,64 +144,64 @@ const HealthAssessmentDocument: React.FC<HealthAssessmentDocumentProps> = ({
     return String(value);
   };
 
-const generatePDF = async (mode: 'download' | 'save') => {
-  const input = document.querySelector('.health-assessment-document') as HTMLElement;
-  if (!input) return toast.error('Unable to generate PDF');
+  const generatePDF = async (mode: 'download' | 'save') => {
+    const input = document.querySelector('.health-assessment-document') as HTMLElement;
+    if (!input) return toast.error('Unable to generate PDF');
 
-  try {
-    const canvas = await html2canvas(input, {
-      scale: 1.25,
-      useCORS: true,
-      backgroundColor: '#ffffff'
-    });
-
-    const imgData = canvas.toDataURL('image/jpeg', 0.85);
-    const pdf = new jsPDF('p', 'mm', 'a4');
-
-    const pageWidth = 210;
-    const pageHeight = 297;
-
-    const imgHeight = (canvas.height * pageWidth) / canvas.width;
-
-    // ✅ CRITICAL FIX
-    const totalPages = Math.floor(imgHeight / pageHeight) +
-      (imgHeight % pageHeight > 20 ? 1 : 0);
-
-    for (let page = 0; page < totalPages; page++) {
-      if (page > 0) pdf.addPage();
-
-      pdf.addImage(
-        imgData,
-        'JPEG',
-        0,
-        -(page * pageHeight),
-        pageWidth,
-        imgHeight
-      );
-    }
-
-    if (mode === 'download') {
-      pdf.save('Health_Assessment_Report.pdf');
-    } else {
-      await uploadPdfToServer(pdf);
-    }
-
-  } catch (err) {
-    console.error(err);
-    toast.error('PDF generation failed');
-  }
-};
-
-
-
-
-
-
-const uploadPdfToServer = async (pdf: jsPDF, retries = 3) => {
-  
     try {
-     
-      
+      const canvas = await html2canvas(input, {
+        scale: 1.25,
+        useCORS: true,
+        backgroundColor: '#ffffff'
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.85);
+      const pdf = new jsPDF('p', 'mm', 'a4');
+
+      const pageWidth = 210;
+      const pageHeight = 297;
+
+      const imgHeight = (canvas.height * pageWidth) / canvas.width;
+
+      // ✅ CRITICAL FIX
+      const totalPages = Math.floor(imgHeight / pageHeight) +
+        (imgHeight % pageHeight > 20 ? 1 : 0);
+
+      for (let page = 0; page < totalPages; page++) {
+        if (page > 0) pdf.addPage();
+
+        pdf.addImage(
+          imgData,
+          'JPEG',
+          0,
+          -(page * pageHeight),
+          pageWidth,
+          imgHeight
+        );
+      }
+
+      if (mode === 'download') {
+        pdf.save('Health_Assessment_Report.pdf');
+      } else {
+        await uploadPdfToServer(pdf);
+      }
+
+    } catch (err) {
+      console.error(err);
+      toast.error('PDF generation failed');
+    }
+  };
+
+
+
+
+
+
+  const uploadPdfToServer = async (pdf: jsPDF, retries = 3) => {
+
+    try {
+
+
       // Your existing FormData creation logic...
       const pdfBlob = pdf.output('blob');
       const formData = new FormData();
@@ -212,7 +212,7 @@ const uploadPdfToServer = async (pdf: jsPDF, retries = 3) => {
       formData.append('HRAOutpuDetailsId', '0');
 
       // Make the API call - ensure URL is correct
-      const apiUrl = 'https://api.welleazy.com/CRMInsertUpdateHRAOutputDetails'; // VERIFY THIS
+      const apiUrl = `${process.env.REACT_APP_API_URL || "http://3.110.32.224"}/CRMInsertUpdateHRAOutputDetails`; // VERIFY THIS
       const response = await fetch(apiUrl, {
         method: 'POST',
         body: formData,
@@ -227,15 +227,15 @@ const uploadPdfToServer = async (pdf: jsPDF, retries = 3) => {
       console.log('Upload successful:', result);
       toast.success('PDF saved successfully!');
       return result;
-      
+
     } catch (error) {
-     
-   
-      
+
+
+
 
     }
-  
-};
+
+  };
 
 
 
@@ -247,12 +247,12 @@ const uploadPdfToServer = async (pdf: jsPDF, retries = 3) => {
       toast.error('No assessment data available to save');
       return;
     }
-    
+
     if (!hrageneralDetailsId || hrageneralDetailsId === "0") {
       toast.error('Missing HRAGeneralDetailsId. Cannot save record.');
       return;
     }
-    
+
     setIsSaving(true);
     try {
       const createdBy = localStorage.getItem("LoginRefId") || "0";
@@ -388,7 +388,7 @@ const uploadPdfToServer = async (pdf: jsPDF, retries = 3) => {
               Health Assessment Report
             </h1>
             <div className="health-assessment-document-subtitle">Comprehensive Health Analysis Document</div>
-            
+
             <div className="health-assessment-document-header-meta">
               <div className="health-assessment-document-meta-card">
                 <div className="health-assessment-document-meta-icon">📅</div>
@@ -397,7 +397,7 @@ const uploadPdfToServer = async (pdf: jsPDF, retries = 3) => {
                   <div className="health-assessment-document-meta-value">{assessmentData.submissionDate}</div>
                 </div>
               </div>
-              
+
               <div className="health-assessment-document-meta-card">
                 <div className="health-assessment-document-meta-icon">👤</div>
                 <div className="health-assessment-document-meta-content">
@@ -405,7 +405,7 @@ const uploadPdfToServer = async (pdf: jsPDF, retries = 3) => {
                   <div className="health-assessment-document-meta-value">{assessmentData.userInfo.name}</div>
                 </div>
               </div>
-              
+
               <div className="health-assessment-document-meta-card">
                 <div className="health-assessment-document-meta-icon">🆔</div>
                 <div className="health-assessment-document-meta-content">
@@ -421,23 +421,23 @@ const uploadPdfToServer = async (pdf: jsPDF, retries = 3) => {
       {/* 3 SMALL BUTTONS IN SINGLE ROW */}
       <div className="health-assessment-document-control-panel">
         <div className="health-assessment-document-control-buttons">
-        <button
-  className="health-assessment-document-btn health-assessment-document-primary-btn health-assessment-document-download"
-  onClick={() => generatePDF('download')}
->
-  📥 Download PDF
-</button>
+          <button
+            className="health-assessment-document-btn health-assessment-document-primary-btn health-assessment-document-download"
+            onClick={() => generatePDF('download')}
+          >
+            📥 Download PDF
+          </button>
 
           {/* <button className="health-assessment-document-btn health-assessment-document-secondary-btn health-assessment-document-print" onClick={handlePrint}>
             <span className="health-assessment-document-btn-icon">🖨️</span>
             Print
           </button> */}
-        <button
-  className="health-assessment-document-btn health-assessment-document-accent-btn health-assessment-document-save"
-  onClick={() => generatePDF('save')}
->
-  💾 Save
-</button>
+          <button
+            className="health-assessment-document-btn health-assessment-document-accent-btn health-assessment-document-save"
+            onClick={() => generatePDF('save')}
+          >
+            💾 Save
+          </button>
 
         </div>
       </div>
@@ -445,10 +445,10 @@ const uploadPdfToServer = async (pdf: jsPDF, retries = 3) => {
       {/* Main Content - Two Column Layout */}
       <main className="health-assessment-document-main-content">
         <div className="health-assessment-document-two-column-grid">
-          
+
           {/* Left Column */}
           <div className="health-assessment-document-column health-assessment-document-left-column">
-            
+
             {/* Section 1: Personal Information */}
             <section className="health-assessment-document-info-card">
               <div className="health-assessment-document-card-header">
@@ -571,7 +571,7 @@ const uploadPdfToServer = async (pdf: jsPDF, retries = 3) => {
                   <span className="health-assessment-document-data-value">{assessmentData.hereditaryQuestions.stoppedMedication}</span>
                 </div> */}
                 <div className="health-assessment-document-data-item">
-                  <span className="health-assessment-document-data-label" style={{whiteSpace:'nowrap'}}>Other Medicine Sources:</span>
+                  <span className="health-assessment-document-data-label" style={{ whiteSpace: 'nowrap' }}>Other Medicine Sources:</span>
                   <span className="health-assessment-document-data-value">{formatData(assessmentData.hereditaryQuestions.otherMedicineSources)}</span>
                 </div>
               </div>
@@ -639,7 +639,7 @@ const uploadPdfToServer = async (pdf: jsPDF, retries = 3) => {
 
           {/* Right Column */}
           <div className="health-assessment-document-column health-assessment-document-right-column">
-            
+
             {/* Section 2: Basic Health Profile */}
             <section className="health-assessment-document-info-card health-assessment-document-health">
               <div className="health-assessment-document-card-header">
@@ -718,8 +718,8 @@ const uploadPdfToServer = async (pdf: jsPDF, retries = 3) => {
               </div>
               <div className="health-assessment-document-card-content">
                 <div className="health-assessment-document-data-item">
-                  <span className="health-assessment-document-data-label" style={{whiteSpace:'nowrap'}}>Alcohol Consumption:</span>
-              <span className="health-assessment-document-data-value ">
+                  <span className="health-assessment-document-data-label" style={{ whiteSpace: 'nowrap' }}>Alcohol Consumption:</span>
+                  <span className="health-assessment-document-data-value ">
                     {formatData(assessmentData.drinkingHabits.consumingAlcohol)}
                   </span>
                 </div>
@@ -741,7 +741,7 @@ const uploadPdfToServer = async (pdf: jsPDF, retries = 3) => {
             </section>
 
             {/* Section 8: Bowel & Bladder Habits */}
-            <section className="health-assessment-document-info-card health-assessment-document-bowel" style={{ marginTop:'10px'}}>
+            <section className="health-assessment-document-info-card health-assessment-document-bowel" style={{ marginTop: '10px' }}>
               <div className="health-assessment-document-card-header">
                 <div className="health-assessment-document-section-number">08</div>
                 <h2 className="health-assessment-document-section-title">Bowel & Bladder Habits</h2>
@@ -749,7 +749,7 @@ const uploadPdfToServer = async (pdf: jsPDF, retries = 3) => {
               </div>
               <div className="health-assessment-document-card-content">
                 <div className="health-assessment-document-data-item">
-                  <span className="health-assessment-document-data-label" style={{whiteSpace: 'nowrap'}}>Difficulty Urinating:</span>
+                  <span className="health-assessment-document-data-label" style={{ whiteSpace: 'nowrap' }}>Difficulty Urinating:</span>
                   <span className="health-assessment-document-data-value">{formatData(assessmentData.bowelBladderHabits.difficultyUrinating)}</span>
                 </div>
                 <div className="health-assessment-document-data-item">
@@ -760,7 +760,7 @@ const uploadPdfToServer = async (pdf: jsPDF, retries = 3) => {
             </section>
 
             {/* Section 10: Mental Wellness */}
-            <section className="health-assessment-document-info-card health-assessment-document-mental"> 
+            <section className="health-assessment-document-info-card health-assessment-document-mental">
               <div className="health-assessment-document-card-header">
                 <div className="health-assessment-document-section-number">10</div>
                 <h2 className="health-assessment-document-section-title">Mental Wellness</h2>
@@ -776,7 +776,7 @@ const uploadPdfToServer = async (pdf: jsPDF, retries = 3) => {
                   <span className="health-assessment-document-data-value">{formatData(assessmentData.mentalWellness.feelingSad)}</span>
                 </div>
                 <div className="health-assessment-document-data-item">
-                  <span className="health-assessment-document-data-label" style={{whiteSpace:'nowrap'}}>Sleep/Appetite Problems:</span>
+                  <span className="health-assessment-document-data-label" style={{ whiteSpace: 'nowrap' }}>Sleep/Appetite Problems:</span>
                   <span className="health-assessment-document-data-value">{formatData(assessmentData.mentalWellness.sleepAppetiteProblems)}</span>
                 </div>
                 <div className="health-assessment-document-data-item">
@@ -810,13 +810,13 @@ const uploadPdfToServer = async (pdf: jsPDF, retries = 3) => {
             <div className="health-assessment-document-disclaimer-content">
               <h4 className="health-assessment-document-disclaimer-title">Disclaimer</h4>
               <p className="health-assessment-document-disclaimer-text">
-                This health assessment is for informational purposes only and should not be considered medical advice. 
+                This health assessment is for informational purposes only and should not be considered medical advice.
                 Please consult with a healthcare professional for medical advice and treatment.
               </p>
             </div>
           </div>
-          
-         
+
+
         </div>
       </footer>
     </div>

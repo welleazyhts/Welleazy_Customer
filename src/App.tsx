@@ -42,9 +42,10 @@ import MyBookings from './pages/MyBookings/MyBookings';
 import HealthAssessmentDocument from './pages/HealthAssessment/HealthAssessmentDocument';
 import PharmacyOfflineMedicine from './pages/Pharmacy/PharmacyOfflineMedicine';
 import PharmacyCouponSuccess from './pages/Pharmacy/PharmacyCouponSuccess';
-import ProductDetails  from './pages/Pharmacy/ProductDetails ';
-import DiagnosticCenters from  './pages/Services/DiagnosticCenters';
+import ProductDetails from './pages/Pharmacy/ProductDetails ';
+import DiagnosticCenters from './pages/Services/DiagnosticCenters';
 import DiagnosticCart from './pages/Services/DiagnosticCart';
+import DiagnosticCheckout from './pages/Services/DiagnosticCheckout';
 import ManageProfile from './pages/Profile/ManageProfile';
 import Dependants from './pages/Profile/Dependants';
 import AddressBook from './pages/Profile/AddressBook';
@@ -72,9 +73,9 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 const ProfileCompletionRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, loading, needsProfileCompletion } = useAuth();
   if (loading) return <LoadingSpinner />;
-  if (!isAuthenticated) return <Navigate to="/login" />;  
+  if (!isAuthenticated) return <Navigate to="/login" />;
   if (needsProfileCompletion) return <Navigate to="/welcome" />;
-  
+
   return <>{children}</>;
 };
 
@@ -90,8 +91,8 @@ const AppContent: React.FC = () => {
         <Routes>
           <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
 
-          <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} /> 
-          
+          <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+
           <Route path="/services" element={<ProtectedRoute><Services /></ProtectedRoute>} />
           <Route path="/consultation" element={<ProtectedRoute><Consultation /></ProtectedRoute>} />
           <Route path="/doctors" element={<ProtectedRoute><DoctorListing /></ProtectedRoute>} />
@@ -111,22 +112,23 @@ const AppContent: React.FC = () => {
           <Route path="/home-elderly-care" element={<ProtectedRoute><HomeElderlyCare /></ProtectedRoute>} />
           <Route path="/my-bookings" element={<ProtectedRoute><MyBookings /></ProtectedRoute>} />
           <Route path="/gym-voucher" element={<GymVocher />} />
-          <Route path='/Eye-voucher' element={<EyeCareVocher/>}/>
-        <Route path="/health-assessment/document" element={<HealthAssessmentDocument />} />
-         <Route path="/pharmacy/offline-medicine" element={< PharmacyOfflineMedicine/>} />
-             <Route path="/pharmacy/coupon-success" element={< PharmacyCouponSuccess/>} />
-             <Route path="/pharmacy/product" element={<ProductDetails />} />
+          <Route path='/Eye-voucher' element={<EyeCareVocher />} />
+          <Route path="/health-assessment/document" element={<HealthAssessmentDocument />} />
+          <Route path="/pharmacy/offline-medicine" element={< PharmacyOfflineMedicine />} />
+          <Route path="/pharmacy/coupon-success" element={< PharmacyCouponSuccess />} />
+          <Route path="/pharmacy/product" element={<ProductDetails />} />
 
-        <Route path="/diagnostic-centers" element={< DiagnosticCenters/>} />
- <Route path="/diagnostic-cart" element={< DiagnosticCart/>} />
-  <Route path="/MangeProfile" element={< ManageProfile/>} />
-  <Route path="/dependants" element={<Dependants />} />
-   <Route path="/my-address" element={<AddressBook />} />
-    <Route path="/CheckOut" element={<CheckOut />} />
-    <Route path="/CommonCartDcAndConsultation" element={<CommonCartDcAndConsultation />} />
-    <Route path="/appointment-voucher" element={<AppointmentVoucher />} />
-    <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
-    <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/diagnostic-centers" element={< DiagnosticCenters />} />
+          <Route path="/diagnostic-cart" element={< DiagnosticCart />} />
+          <Route path="/diagnostic-checkout" element={<ProtectedRoute><DiagnosticCheckout /></ProtectedRoute>} />
+          <Route path="/MangeProfile" element={< ManageProfile />} />
+          <Route path="/dependants" element={<Dependants />} />
+          <Route path="/my-address" element={<AddressBook />} />
+          <Route path="/CheckOut" element={<CheckOut />} />
+          <Route path="/CommonCartDcAndConsultation" element={<CommonCartDcAndConsultation />} />
+          <Route path="/appointment-voucher" element={<AppointmentVoucher />} />
+          <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/welcome" element={<ProtectedRoute><Welcome /></ProtectedRoute>} />
 
 
@@ -153,7 +155,7 @@ const App: React.FC = () => {
       <Router>
         <AppContent />
         <ToastContainer
-          
+
           autoClose={2000}
           hideProgressBar={false}
           newestOnTop={false}

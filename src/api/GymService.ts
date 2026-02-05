@@ -1,7 +1,7 @@
 
 import { promises } from "dns";
 import { GymPackage, CustomerProfile, State, District, GymCenter, Relationship, RelationshipPerson } from "../types/GymServices";
-const API_URL = "https://api.welleazy.com";
+const API_URL = process.env.REACT_APP_API_URL || "http://3.110.32.224:8000";
 
 export const gymServiceAPI = {
 
@@ -85,8 +85,21 @@ export const gymServiceAPI = {
         throw new Error("Network response was not ok");
       }
 
-      const data: District[] = await response.json();
-      return data;
+      const responseData = await response.json();
+
+      let rawData: any[] = [];
+      if (Array.isArray(responseData)) {
+        rawData = responseData;
+      } else if (responseData && Array.isArray((responseData as any).data)) {
+        rawData = (responseData as any).data;
+      } else if (responseData && Array.isArray((responseData as any).results)) {
+        rawData = (responseData as any).results;
+      }
+
+      return rawData.map((item: any, index: number) => ({
+        DistrictId: item.id || item.DistrictId || index,
+        DistrictName: item.name || item.DistrictName || (typeof item === 'string' ? item : ""),
+      })) as District[];
     } catch (error) {
       console.error("Error fetching district list:", error);
       throw error;
@@ -147,7 +160,7 @@ export const gymServiceAPI = {
   CRMRelationShipList: async (): Promise<Relationship[]> => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://3.110.32.224/api/dependants/relationship-types/', {
+      const response = await fetch(`${API_URL}/api/dependants/relationship-types/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -168,8 +181,8 @@ export const gymServiceAPI = {
       }
 
       return rawData.map((item: any) => ({
-        RelationshipId: item.id || item.RelationshipId,
-        Relationship: item.name || item.Relationship,
+        RelationshipId: item.id || item.RelationshipId || item.pk,
+        Relationship: item.name || item.Relationship || item.RelationshipName || item.relationship_name || "Unknown Relation",
       })) as Relationship[];
     } catch (error) {
       console.error("Error fetching relationship list:", error);
@@ -178,26 +191,55 @@ export const gymServiceAPI = {
   },
   CRMRelationShipPersonNames: async (employeeRefId: number, relationshipId: number): Promise<RelationshipPerson[]> => {
     try {
-      const response = await fetch(`${API_URL}/CRMRelationShipPersonNames`, {
-        method: "POST",
+      const token = localStorage.getItem('token');
+      // Use the standard dependants endpoint and filter client-side
+      const response = await fetch(`${API_URL}/api/dependants/`, {
+        method: "GET",
         headers: {
+          'Authorization': `Bearer ${token}`,
           "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          EmployeeRefId: employeeRefId,
-          RelationshipId: relationshipId,
-        }),
+        }
       });
 
       if (!response.ok) {
         throw new Error("Network response was not ok");
       }
 
-      const data: RelationshipPerson[] = await response.json();
-      return data;
+      const responseData = await response.json();
+      console.log("Relationship Person Response:", responseData);
+
+      let rawData: any[] = [];
+      if (Array.isArray(responseData)) {
+        rawData = responseData;
+      } else if (responseData && Array.isArray((responseData as any).data)) {
+        rawData = (responseData as any).data;
+      } else if (responseData && Array.isArray((responseData as any).results)) {
+        rawData = (responseData as any).results;
+      }
+
+      // Filter by relationship ID if provided (0 means All)
+      const filteredData = relationshipId === 0 ? rawData : rawData.filter((item: any) => {
+        // As per provided JSON, the field is 'relationship'.
+        // We prioritizing checking 'relationship' directly.
+        const itemRelId = item.relationship;
+
+        // Also support legacy/alternative fields just in case
+        const derivedRelId = itemRelId || item.DependentRelationShip || item.RelationshipId;
+
+        // Perform strict numeric comparison
+        return Number(derivedRelId) === Number(relationshipId);
+      });
+
+      console.log(`Filtered Dependents for Relationship ID ${relationshipId}:`, filteredData);
+
+      return filteredData.map((item: any) => ({
+        EmployeeDependentDetailsId: item.id || item.EmployeeDependentDetailsId || item.pk,
+        DependentName: item.name || item.DependentName || item.dependant_name || "Unknown Name",
+      })) as RelationshipPerson[];
+
     } catch (error) {
       console.error("Error fetching relationship person names:", error);
-      throw error;
+      return [];
     }
   },
 

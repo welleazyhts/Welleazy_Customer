@@ -1,17 +1,17 @@
-import { 
-  HealthRecord, 
-  HealthRecordsListApiResponse, 
+import {
+  HealthRecord,
+  HealthRecordsListApiResponse,
   HospitalizationDetail,
   MedicalBillDetail,
-  VaccinationDetails, 
-  TestReportDocument, 
-  MedicalBillDocument, 
-  VaccinationDocument, 
+  VaccinationDetails,
+  TestReportDocument,
+  MedicalBillDocument,
+  VaccinationDocument,
   HospitalizationDocument,
-  DoctorSpecialization,TestReportParameterRecord
+  DoctorSpecialization, TestReportParameterRecord
 } from "../types/HealthRecords";
 
-const API_BASE_URL = "https://api.welleazy.com";
+const API_BASE_URL = process.env.REACT_APP_API_URL || "http://3.110.32.224:8000";
 
 const HealthRecordsAPI = {
   // GET Methods (existing)
@@ -186,26 +186,26 @@ const HealthRecordsAPI = {
   },
 
   // ADD/UPDATE Methods
-// In your HealthRecordsAPI file
-CRMSaveCustomerTestReportDetails: async (formDataToSend: FormData): Promise<any> => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/CRMSaveCustomerTestReportDetails`, {
-      method: 'POST',
-      body: formDataToSend,
-    });
+  // In your HealthRecordsAPI file
+  CRMSaveCustomerTestReportDetails: async (formDataToSend: FormData): Promise<any> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/CRMSaveCustomerTestReportDetails`, {
+        method: 'POST',
+        body: formDataToSend,
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("Error saving health record:", error);
+      throw error;
     }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error("Error saving health record:", error);
-    throw error;
-  }
-},
+  },
 
 
 
@@ -244,7 +244,7 @@ CRMSaveCustomerTestReportDetails: async (formDataToSend: FormData): Promise<any>
       const data = await response.json();
       return data;
     } catch (error) {
-      console.error("Error saving medical bill detail:", error); 
+      console.error("Error saving medical bill detail:", error);
       throw error;
     }
   },
@@ -252,10 +252,10 @@ CRMSaveCustomerTestReportDetails: async (formDataToSend: FormData): Promise<any>
   CRMSaveCustomerVaccinationDetails: async (formData: FormData): Promise<any> => {
     try {
       const response = await fetch(`${API_BASE_URL}/CRMSaveCustomerVaccinationDetails`, {
-        method: "POST", 
+        method: "POST",
         body: formData,
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
@@ -266,7 +266,7 @@ CRMSaveCustomerTestReportDetails: async (formDataToSend: FormData): Promise<any>
       console.error("Error saving vaccination detail:", error);
       throw error;
     }
-  }, 
+  },
 
   // GET BY ID Methods for editing
   CRMGetCustomerTestReportDetailsById: async (trId: number): Promise<any> => {
@@ -340,7 +340,7 @@ CRMSaveCustomerTestReportDetails: async (formDataToSend: FormData): Promise<any>
       const response = await fetch(`${API_BASE_URL}/CRMGetCustomerVaccinationDetailsById`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ V_id: vId }), 
+        body: JSON.stringify({ V_id: vId }),
       });
 
       if (!response.ok) {
@@ -361,20 +361,20 @@ CRMSaveCustomerTestReportDetails: async (formDataToSend: FormData): Promise<any>
     ToDate: string;
     CaseForOption: string;
     DoctorName: string;
-    EmployeeRefid:string
+    EmployeeRefid: string
   }): Promise<any[]> => {
     try {
       console.log("Sending filter request for test reports:", filterData);
-      
+
       const response = await fetch(`${API_BASE_URL}/LoadHealthRecordsDetailsWithFilterForTR`, {
-        method: "POST", 
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           FromDate: filterData.FromDate,
           ToDate: filterData.ToDate,
           CaseForOption: filterData.CaseForOption,
           DoctorName: filterData.DoctorName,
-         EmployeeRefid:filterData.EmployeeRefid
+          EmployeeRefid: filterData.EmployeeRefid
         }),
       });
 
@@ -386,7 +386,7 @@ CRMSaveCustomerTestReportDetails: async (formDataToSend: FormData): Promise<any>
 
       const data = await response.json();
       console.log("Filter API success response:", data);
-      
+
       return Array.isArray(data) ? data : data.records || [];
     } catch (error) {
       console.error("Error fetching filtered test reports:", error);
@@ -399,11 +399,11 @@ CRMSaveCustomerTestReportDetails: async (formDataToSend: FormData): Promise<any>
     ToDate: string;
     CaseForOption: string;
     DoctorName: string;
-    EmployeeRefid:string
+    EmployeeRefid: string
   }): Promise<any[]> => {
     try {
       console.log("Sending filter request for hospitalizations:", filterData);
-      
+
       const response = await fetch(`${API_BASE_URL}/LoadHealthRecordsDetailsWithFilterForHL`, {
         method: "POST", // CHANGED TO POST
         headers: { "Content-Type": "application/json" },
@@ -412,7 +412,7 @@ CRMSaveCustomerTestReportDetails: async (formDataToSend: FormData): Promise<any>
           ToDate: filterData.ToDate,
           CaseForOption: filterData.CaseForOption,
           DoctorName: filterData.DoctorName,
-           EmployeeRefid:filterData.EmployeeRefid
+          EmployeeRefid: filterData.EmployeeRefid
         }),
       });
 
@@ -424,7 +424,7 @@ CRMSaveCustomerTestReportDetails: async (formDataToSend: FormData): Promise<any>
 
       const data = await response.json();
       console.log("Filter API success response:", data);
-      
+
       return Array.isArray(data) ? data : data.records || [];
     } catch (error) {
       console.error("Error fetching filtered hospitalizations:", error);
@@ -437,11 +437,11 @@ CRMSaveCustomerTestReportDetails: async (formDataToSend: FormData): Promise<any>
     ToDate: string;
     CaseForOption: string;
     DoctorName: string;
-     EmployeeRefid:string
+    EmployeeRefid: string
   }): Promise<any[]> => {
     try {
       console.log("Sending filter request for medical bills:", filterData);
-      
+
       const response = await fetch(`${API_BASE_URL}/LoadHealthRecordsDetailsWithFilterForMB`, {
         method: "POST", // CHANGED TO POST
         headers: { "Content-Type": "application/json" },
@@ -450,7 +450,7 @@ CRMSaveCustomerTestReportDetails: async (formDataToSend: FormData): Promise<any>
           ToDate: filterData.ToDate,
           CaseForOption: filterData.CaseForOption,
           DoctorName: filterData.DoctorName,
-           EmployeeRefid:filterData.EmployeeRefid
+          EmployeeRefid: filterData.EmployeeRefid
         }),
       });
 
@@ -462,7 +462,7 @@ CRMSaveCustomerTestReportDetails: async (formDataToSend: FormData): Promise<any>
 
       const data = await response.json();
       console.log("Filter API success response:", data);
-      
+
       return Array.isArray(data) ? data : data.records || [];
     } catch (error) {
       console.error("Error fetching filtered medical bills:", error);
@@ -475,11 +475,11 @@ CRMSaveCustomerTestReportDetails: async (formDataToSend: FormData): Promise<any>
     ToDate: string;
     CaseForOption: string;
     DoctorName: string;
-     EmployeeRefid:string
+    EmployeeRefid: string
   }): Promise<any[]> => {
     try {
       console.log("Sending filter request for vaccinations:", filterData);
-      
+
       const response = await fetch(`${API_BASE_URL}/LoadHealthRecordsDetailsWithFilterForVC`, {
         method: "POST", // CHANGED TO POST
         headers: { "Content-Type": "application/json" },
@@ -488,7 +488,7 @@ CRMSaveCustomerTestReportDetails: async (formDataToSend: FormData): Promise<any>
           ToDate: filterData.ToDate,
           CaseForOption: filterData.CaseForOption,
           DoctorName: filterData.DoctorName,
-           EmployeeRefid:filterData.EmployeeRefid
+          EmployeeRefid: filterData.EmployeeRefid
         }),
       });
 
@@ -500,7 +500,7 @@ CRMSaveCustomerTestReportDetails: async (formDataToSend: FormData): Promise<any>
 
       const data = await response.json();
       console.log("Filter API success response:", data);
-      
+
       return Array.isArray(data) ? data : data.records || [];
     } catch (error) {
       console.error("Error fetching filtered vaccinations:", error);
@@ -509,34 +509,34 @@ CRMSaveCustomerTestReportDetails: async (formDataToSend: FormData): Promise<any>
   },
 
 
- CRMFetchDoctorSpecializationDetails: async (): 
-  Promise<DoctorSpecialization[]> => {
-  
-  try {
-    const response = await fetch(
-      `${API_BASE_URL}/CRMFetchDoctorSpecializationDetails`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
+  CRMFetchDoctorSpecializationDetails: async ():
+    Promise<DoctorSpecialization[]> => {
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/CRMFetchDoctorSpecializationDetails`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    );
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const data: DoctorSpecialization[] = await response.json();
+      return data;
+
+    } catch (error) {
+      console.error("Error fetching doctor specialization:", error);
+      throw error;
     }
+  },
 
-    const data: DoctorSpecialization[] = await response.json();
-    return data;
-
-  } catch (error) {
-    console.error("Error fetching doctor specialization:", error);
-    throw error;
-  }
-},
-
- CRMGetCustomerTestReportParameterDetails: async (employeeRefId: number): Promise<TestReportParameterRecord[]> => {
+  CRMGetCustomerTestReportParameterDetails: async (employeeRefId: number): Promise<TestReportParameterRecord[]> => {
     try {
       const response = await fetch(`${API_BASE_URL}/CRMGetCustomerTestReportParameterDetails`, {
         method: "POST",
@@ -585,30 +585,30 @@ CRMSaveCustomerTestReportDetails: async (formDataToSend: FormData): Promise<any>
   },
 
 
-GetVaccinationDetailsdropdown: async (): Promise<any[]> => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/GetVaccinationDetails`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(
-        `HTTP error! status: ${response.status}, message: ${errorText}`
+  GetVaccinationDetailsdropdown: async (): Promise<any[]> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/GetVaccinationDetails`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
       );
-    }
 
-    return await response.json();
-  } catch (error) {
-    console.error("Error fetching vaccination details:", error);
-    throw error;
-  }
-},
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `HTTP error! status: ${response.status}, message: ${errorText}`
+        );
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Error fetching vaccination details:", error);
+      throw error;
+    }
+  },
 
 
 

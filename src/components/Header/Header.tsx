@@ -7,6 +7,7 @@ import { toast } from 'react-toastify';
 import { DependantsAPI } from '../../api/dependants';
 import { District } from '../../types/dependants';
 import { CheckOutAPI } from '../../api/CheckOut';
+import { labTestsAPI } from '../../api/labtests';
 
 import {
   faShoppingCart,
@@ -19,7 +20,9 @@ import {
   faFileMedical,
   faFileInvoiceDollar,
   faStethoscope,
-  faHeartCirclePlus
+  faHeartCirclePlus,
+  faCalendarAlt,
+  faNotesMedical
 } from '@fortawesome/free-solid-svg-icons';
 import './Header.css';
 
@@ -87,6 +90,9 @@ interface DiagnosticCartItem {
   dcId?: string;
   dcName?: string;
   packageCode?: string;
+  note?: string;
+  appointmentDate?: string;
+  appointmentTime?: string;
 }
 
 const Header: React.FC = () => {
@@ -260,6 +266,50 @@ const Header: React.FC = () => {
       window.removeEventListener('cartUpdated', handleCartUpdate);
     };
   }, []);
+
+  // Fetch diagnostic cart from API
+  useEffect(() => {
+    const fetchDiagnosticCartFromAPI = async () => {
+      if (!user) return;
+
+      try {
+        const cartResponse = await labTestsAPI.viewCart();
+        if (cartResponse && cartResponse.items) {
+          const apiDiagnosticItems: DiagnosticCartItem[] = cartResponse.items.map((item: any) => ({
+            id: item.id.toString(),
+            type: 'diagnostic' as const,
+            testId: (item.tests && item.tests.length > 0) ? item.tests[0].toString() : '0',
+            testName: item.diagnostic_center_name || 'Diagnostic Test', // Use DC name or default
+            price: parseFloat(item.price || '0'),
+            quantity: 1,
+            selectedFor: item.is_for_self ? 'self' : 'dependent',
+            dependentName: item.dependant_name || undefined,
+            dcId: item.diagnostic_center?.toString(),
+            dcName: item.diagnostic_center_name || 'DC',
+            note: item.note,
+            appointmentDate: item.appointment_date,
+            appointmentTime: item.appointment_time
+          }));
+
+          const employeeRefId = localStorage.getItem("EmployeeRefId") || "0";
+          const cartKey = `app_cart_${employeeRefId}`;
+          const existingCart = JSON.parse(localStorage.getItem(cartKey) || '[]');
+          const nonDiagnosticItems = existingCart.filter((item: any) => item.type !== 'diagnostic');
+          const updatedCart = [...nonDiagnosticItems, ...apiDiagnosticItems];
+
+          localStorage.setItem(cartKey, JSON.stringify(updatedCart));
+          setDiagnosticCartItems(apiDiagnosticItems);
+          window.dispatchEvent(new CustomEvent('cartUpdated'));
+        }
+      } catch (error) {
+        console.error('Error fetching diagnostic cart from API:', error);
+      }
+    };
+
+    if (user) {
+      fetchDiagnosticCartFromAPI();
+    }
+  }, [user, location.pathname]);
 
   // Fetch appointment cart from API
   useEffect(() => {
@@ -592,28 +642,33 @@ const Header: React.FC = () => {
   const handleProceedToCheckout = async () => {
     setShowCartMenu(false);
 
+    // If we have diagnostic items, always go to the new diagnostic cart page
+    if (diagnosticCartItems.length > 0) {
+      const selectedTests = diagnosticCartItems.map(item => ({
+        TestId: item.testId,
+        TestName: item.testName,
+        TestPackageCode: item.packageCode,
+        CorporatePrice: item.price,
+        NormalPrice: item.price
+      }));
+
+      const firstItemWithDC = diagnosticCartItems.find(item => item.dcId);
+      const selectedDC = firstItemWithDC ? {
+        dc_id: parseInt(firstItemWithDC.dcId || "0"),
+        center_name: firstItemWithDC.dcName || ""
+      } : null;
+
+      navigate('/diagnostic-cart', {
+        state: {
+          selectedTests: selectedTests,
+          selectedDC: selectedDC
+        }
+      });
+      return;
+    }
+
     if (isOnPharmacyPage) {
       navigate('/pharmacy/cart');
-    } else if (isOnDiagnosticPage) {
-      // Navigate to diagnostic cart page
-      if (diagnosticCartItems.length > 0) {
-        // Extract test data from diagnostic cart items
-        const selectedTests = diagnosticCartItems.map(item => ({
-          TestId: item.testId,
-          TestName: item.testName,
-          TestPackageCode: item.packageCode,
-          CorporatePrice: item.price,
-          NormalPrice: item.price
-        }));
-
-        // You might need to get the diagnostic center from localStorage or navigate to selection
-        navigate('/diagnostic-cart', {
-          state: {
-            selectedTests: selectedTests,
-            // You might need to pass additional data like diagnostic center
-          }
-        });
-      }
     } else {
       try {
         const employeeRefId = localStorage.getItem("EmployeeRefId");
@@ -804,11 +859,7 @@ const Header: React.FC = () => {
                 </Link>
               </div>
               <div className="cart-section" ref={cartRef}>
-                <div className="icon-container" onClick={() => {
-                  setShowCartMenu(!showCartMenu);
-                  setShowProfileMenu(false);
-                  setShowNotifications(false);
-                }}>
+                <div className="icon-container" onClick={handleProceedToCheckout}>
                   <FontAwesomeIcon icon={faShoppingCart} />
                   {totalCartCount > 0 && (
                     <Badge bg="danger" pill className="cart-badge" style={{ marginLeft: '-13px', marginTop: '-35px' }}>
@@ -816,112 +867,6 @@ const Header: React.FC = () => {
                     </Badge>
                   )}
                   <div className="cart-info"></div>
-                  {showCartMenu && (
-                    <div className="dropdown-menu cart-dropdown show">
-                      <div className="cart-header">
-                        <h6>Cart</h6>
-                      </div>
-                      <div className="cart-body">
-                        {isOnPharmacyPage ? (
-                          pharmacyCartCount === 0 ? (
-                            <p className="empty-cart-message">Your pharmacy cart is empty</p>
-                          ) : (
-                            <div className="cart-items-list">
-                              {cartItems.map((item, index) => (
-                                <div key={`pharmacy_${index}`} className="cart-item pharmacy-item">
-                                  <div className="cart-item-details">
-                                    <div className="cart-item-name">
-                                      <FontAwesomeIcon icon={faPills} className="me-2" />
-                                      {item.name} (Qty: {item.quantity})
-                                    </div>
-                                    <div className="cart-item-price">
-                                      :₹{(item.price * item.quantity).toFixed(2)}
-                                    </div>
-                                  </div>
-                                  <button
-                                    className="cart-item-remove"
-                                    onClick={() => handleRemoveCartItem(index)}
-                                  >
-                                    <FontAwesomeIcon icon={faTrashAlt} />
-                                  </button>
-                                </div>
-                              ))}
-
-                              <div className="cart-total-section">
-                                <div className="total-amount">
-                                  <strong>Total: ₹{totalCartAmount.toFixed(2)}</strong>
-                                </div>
-                              </div>
-                            </div>
-                          )
-                        ) : isOnDiagnosticPage ? (
-                          diagnosticCartCount === 0 ? (
-                            <p className="empty-cart-message">No diagnostic tests in cart</p>
-                          ) : (
-                            <div className="cart-items-list">
-
-
-                            </div>
-                          )
-                        ) : (
-                          appointmentCartCount === 0 ? (
-                            <p className="empty-cart-message">No appointments in cart</p>
-                          ) : (
-                            <div className="cart-items-list">
-                              {appointmentCartItems.map((item, index) => (
-                                <div key={`appointment_${index}`} className="cart-item appointment-item">
-                                  <div className="cart-item-details">
-                                    <div className="cart-item-name">
-                                      {item.consultationType || 'Consultation'}
-                                      :₹{item.price.toFixed(2)}
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-
-
-
-                              <div className="cart-total-section">
-                                <div className="total-amount">
-                                  <strong>Total: ₹{totalCartAmount.toFixed(2)}</strong>
-                                </div>
-                              </div>
-
-                              {diagnosticCartItems.map((item, index) => (
-                                <div key={`diagnostic_${index}`} className="cart-item diagnostic-item">
-                                  <div className="cart-item-details">
-                                    <div className="cart-item-name">
-                                      {item.testName}- {item.price}
-                                    </div>
-
-                                  </div>
-
-                                </div>
-                              ))}
-
-                            </div>
-                          )
-                        )}
-                      </div>
-
-                      {totalCartCount > 0 && (
-                        <div className="cart-footer">
-                          <div className="cart-buttons">
-                            <Button
-                              variant="primary"
-                              size="sm"
-                              className="checkout-btn"
-                              onClick={handleProceedToCheckout}
-                            >
-                              {isOnPharmacyPage ? 'View Cart' :
-                                isOnDiagnosticPage ? 'View Cart' :
-                                  'View Cart'}
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
               </div>
 

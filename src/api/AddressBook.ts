@@ -1,6 +1,6 @@
 import { EmployeeAddressDetails, SaveCustomerAddressRequest } from '../types/AddressBook';
 
-const API_URL = '';
+const API_URL = process.env.REACT_APP_API_URL || "http://3.110.32.224:8000";
 
 export const AddressBookAPI = {
 
@@ -103,4 +103,85 @@ export const AddressBookAPI = {
   },
 
 
+  // New APIs based on Postman collection
+  getSelfAddresses: async (addressType?: number): Promise<any[]> => {
+    const token = localStorage.getItem('token');
+    const url = new URL(`${API_URL}/api/addresses/`);
+    if (addressType) url.searchParams.append('address_type', addressType.toString());
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) throw new Error('Failed to fetch addresses');
+    const data = await response.json();
+    return Array.isArray(data) ? data : data.results || [];
+  },
+
+  getDependentAddresses: async (dependantId: number, addressType?: number): Promise<any[]> => {
+    const token = localStorage.getItem('token');
+    const url = new URL(`${API_URL}/api/addresses/dependants/${dependantId}/addresses/`);
+    if (addressType) url.searchParams.append('address_type', addressType.toString());
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) throw new Error('Failed to fetch dependent addresses');
+    const data = await response.json();
+    return Array.isArray(data) ? data : data.results || [];
+  },
+
+  saveSelfAddress: async (addressData: any): Promise<any> => {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_URL}/api/addresses/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(addressData)
+    });
+
+    if (!response.ok) throw new Error('Failed to save self address');
+    return await response.json();
+  },
+
+  saveDependentAddress: async (dependantId: number, addressData: any): Promise<any> => {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_URL}/api/addresses/dependants/${dependantId}/addresses/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(addressData)
+    });
+
+    if (!response.ok) throw new Error('Failed to save dependent address');
+    return await response.json();
+  },
+
+  getAddressTypes: async (): Promise<any[]> => {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_URL}/api/addresses/types/`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) throw new Error('Failed to fetch address types');
+    const data = await response.json();
+    return Array.isArray(data) ? data : data.results || [];
+  }
 };

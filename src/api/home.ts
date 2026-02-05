@@ -1,4 +1,4 @@
-const API_URL = "https://api.welleazy.com";
+const API_URL = process.env.REACT_APP_API_URL || "http://3.110.32.224:8000";
 
 export const homeAPI = {
   // Main API for all health basic details
@@ -160,26 +160,26 @@ export const homeAPI = {
     }
   },
 
-CRMSaveCustomerWeightDetails: async (employeeRefId: number, weight: string, measurementValue: string, loginRefId: number) => {
-  try {
-    const response = await fetch(`${API_URL}/CRMSaveCustomerWeightDetails`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        EmployeeRefId: employeeRefId,
-        Weight: weight, 
-        MeasurementValue: measurementValue,
-        LoginRefId: loginRefId
-      }),
-    });
+  CRMSaveCustomerWeightDetails: async (employeeRefId: number, weight: string, measurementValue: string, loginRefId: number) => {
+    try {
+      const response = await fetch(`${API_URL}/CRMSaveCustomerWeightDetails`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          EmployeeRefId: employeeRefId,
+          Weight: weight,
+          MeasurementValue: measurementValue,
+          LoginRefId: loginRefId
+        }),
+      });
 
-    if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
-    return await response.json();
-  } catch (error) {
-    console.error("Error updating BMI metric:", error);
-    throw error;
-  }
-},
+      if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      console.error("Error updating BMI metric:", error);
+      throw error;
+    }
+  },
 
   // Update Blood Pressure
   UpdateBloodPressureMetric: async (employeeRefId: number, bloodPressure: string, measurementValue: string, loginRefId: number) => {
@@ -210,7 +210,7 @@ CRMSaveCustomerWeightDetails: async (employeeRefId: number, weight: string, meas
   UpdateHeartRateMetric: async (employeeRefId: number, heartRate: string, measurementValue: string, loginRefId: number) => {
     try {
       const heartRateNum = parseInt(heartRate);
-      
+
       const response = await fetch(`${API_URL}/CRMSaveCustomerHeartRateDetails`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -236,7 +236,7 @@ CRMSaveCustomerWeightDetails: async (employeeRefId: number, weight: string, meas
   UpdateO2SaturationMetric: async (employeeRefId: number, o2Saturation: string, measurementValue: string, loginRefId: number) => {
     try {
       const o2Num = parseInt(o2Saturation);
-      
+
       const response = await fetch(`${API_URL}/CRMSaveCustomerOxygenSaturationDetails`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -304,15 +304,17 @@ CRMSaveCustomerWeightDetails: async (employeeRefId: number, weight: string, meas
   // Get upcoming events
   GetUpcomingEvents: async (employeeRefId?: number, corporateId?: number, roleId?: number, loginType?: number) => {
     try {
-      const response = await fetch(`${API_URL}/CRMUpcomingEventsDetails`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          EmployeeRefId: employeeRefId,
-          RoleId: roleId || 0,
-          LoginType: loginType ,
-          CorporateId: corporateId
-        }),
+      const today = new Date().toISOString().split('T')[0];
+      const nextYear = new Date();
+      nextYear.setFullYear(nextYear.getFullYear() + 1);
+      const toDate = nextYear.toISOString().split('T')[0];
+
+      const response = await fetch(`${API_URL}/api/my-bookings/?from=${today}&to=${toDate}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem('token')}`
+        }
       });
 
       if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
@@ -324,27 +326,27 @@ CRMSaveCustomerWeightDetails: async (employeeRefId: number, weight: string, meas
   },
 
   CRMLoadSponsoredServices: async (employeeRefId: number) => {
-  try {
-    const response = await fetch(
-      `${API_URL}/CRMLoadSponsoredServices/${employeeRefId}`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
+    try {
+      const response = await fetch(
+        `${API_URL}/CRMLoadSponsoredServices/${employeeRefId}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status}`);
       }
-    );
 
-    if (!response.ok) {
-      throw new Error(`HTTP error: ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      console.error("Error fetching sponsored services:", error);
+      return null;
     }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Error fetching sponsored services:", error);
-    return null;
-  }
-},
+  },
 
 
 };

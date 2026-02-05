@@ -1,7 +1,7 @@
 import { api } from '../services/api';
 import { CustomerAppointment, PharmacyOrder, PharmacyCouponAddress } from '../types/MyBookings';
 
-const API_URL = 'http://3.110.32.224';
+const API_URL = 'http://3.110.32.224:8000';
 
 export const MyBookingsAPI = {
 

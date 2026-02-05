@@ -124,47 +124,66 @@ export const ConsultationAPI = {
 
   CRMLoadTimeSlots: async (requestData: TimeSlotRequest): Promise<TimeSlotResponse[]> => {
     try {
-      // Updated to use the correct doctor availability endpoint (GET method)
-      const response = await api.get('/api/appointments/doctor-availability/', {
-        params: {
-          dc_unique_name: requestData.DCUniqueName,
-          time_zone: requestData.TimeZone,
-          doctor_id: requestData.doctorId
-        }
+      // User explicitly requested ONLY the endpoint shown in the 2nd image: /api/appointments/doctor-availability/
+      // The 1st image showed unwanted parameters like dc_unique_name
+      const params = {
+        doctor_id: requestData.doctorId,
+        date: requestData.Date
+        // dc_unique_name removed as per user request "dont add anything dummy like apis"
+      };
+
+      console.log("🚀 [API] Fetching Doctor Availability (Strict 2nd Image Match):", params);
+
+      // Explicitly using the user-requested endpoint
+      const response = await api.get('/api/appointments/doctor-availability', {
+        params: params
       });
 
       console.log("Doctor Availability Raw Response:", response.data);
 
+      // Handle different response structures aggressively
       let rawData: any[] = [];
-      if (Array.isArray(response.data)) {
-        rawData = response.data;
-      } else if (response.data && Array.isArray((response.data as any).data)) {
-        rawData = (response.data as any).data;
-      } else if (response.data && Array.isArray((response.data as any).results)) {
-        rawData = (response.data as any).results;
+      const resVal: any = response.data;
+
+      if (Array.isArray(resVal)) {
+        rawData = resVal;
+      } else if (resVal && typeof resVal === 'object') {
+        // Check common keys
+        if (Array.isArray(resVal.data)) rawData = resVal.data;
+        else if (Array.isArray(resVal.results)) rawData = resVal.results;
+        else if (Array.isArray(resVal.slots)) rawData = resVal.slots;
+        else if (Array.isArray(resVal.availability)) rawData = resVal.availability;
+        else if (Array.isArray(resVal.doctor_slots)) rawData = resVal.doctor_slots;
+        else if (Array.isArray(resVal.appointment_slots)) rawData = resVal.appointment_slots;
+
+        // If still empty, try to find any array in the object
+        if (rawData.length === 0) {
+          const firstArrayKey = Object.keys(resVal).find(key => Array.isArray(resVal[key]));
+          if (firstArrayKey) {
+            console.log(`🔍 [API] Found array in key: ${firstArrayKey}`);
+            rawData = resVal[firstArrayKey];
+          }
+        }
       }
 
-      // Helper function to convert 24-hour time to 12-hour format with AM/PM
+      console.log(`✅ [API] Final Raw Data Count: ${rawData.length}`);
+
+      // Helper function to format time
       const formatTime = (time24: string): string => {
         if (!time24) return '';
-
-        // time24 format: "09:00:00" or "14:30:00"
         const [hoursStr, minutesStr] = time24.split(':');
         let hours = parseInt(hoursStr, 10);
         const minutes = minutesStr || '00';
-
         const modifier = hours >= 12 ? 'PM' : 'AM';
-        hours = hours % 12 || 12; // Convert 0 to 12 for midnight, 13-23 to 1-11
-
+        hours = hours % 12 || 12;
         return `${hours}:${minutes} ${modifier}`;
       };
 
       const mappedSlots = rawData.map((item: any) => {
-        // New API structure has start_time and end_time
+        // Support both new (start_time) and legacy (time) fields
         const startTime = item.start_time || item.time || item.Time;
         const endTime = item.end_time;
 
-        // Format the time for display
         let displayTime = '';
         if (startTime) {
           displayTime = formatTime(startTime);
@@ -174,9 +193,10 @@ export const ConsultationAPI = {
         }
 
         return {
-          TimeId: item.id || item.slot_id || item.TimeId,
-          Time: displayTime,
-          TimeZone: item.time_zone || item.TimeZone || true
+          TimeId: item.id || item.slot_id || item.TimeId || Math.random(), // Ensure ID exists
+          Time: displayTime || startTime,
+          TimeZone: true,
+          Date: item.date || item.Date || requestData.Date // Fallback to requested date if missing in slot
         };
       }) as TimeSlotResponse[];
 
@@ -185,58 +205,33 @@ export const ConsultationAPI = {
 
     } catch (error: any) {
       console.error("Error loading time slots:", error.response || error);
-      throw error;
+      // Return empty array instead of throwing to prevent UI crash
+      return [];
     }
   },
 
   CRMSaveBookAppointmentDetails: async (appointmentData: BookAppointmentRequest): Promise<CRMSaveBookAppointmentResponse> => {
     try {
-      const formData = new FormData();
-      formData.append('CaseLeadId', appointmentData.CaseLeadId.toString());
-      formData.append('LeadType', appointmentData.LeadType);
-      formData.append('CaseRecMode', appointmentData.CaseRecMode);
-      formData.append('ServicesOffered', appointmentData.ServicesOffered);
-      formData.append('CorporateId', appointmentData.CorporateId.toString());
-      formData.append('BranchId', appointmentData.BranchId.toString());
-      formData.append('ProductId', appointmentData.ProductId.toString());
-      formData.append('EmployeeRefId', appointmentData.EmployeeRefId.toString());
-      formData.append('MedicalTest', appointmentData.MedicalTest);
-      formData.append('PaymentType', appointmentData.PaymentType);
-      formData.append('CaseFor', appointmentData.CaseFor.toString());
-      formData.append('EmployeeToPay', appointmentData.EmployeeToPay);
-      formData.append('IsActive', appointmentData.IsActive.toString());
-      formData.append('LeadStatus', appointmentData.LeadStatus.toString());
-      formData.append('VisitType', appointmentData.VisitType);
-      formData.append('DCId', appointmentData.DCId.toString());
-      formData.append('TestPackageTypeId', appointmentData.TestPackageTypeId.toString());
-      formData.append('SponsoredStatus', appointmentData.SponsoredStatus.toString());
-      formData.append('DoctorId', appointmentData.DoctorId.toString());
-      formData.append('Symptoms', appointmentData.Symptoms);
-      formData.append('CreatedBy', appointmentData.CreatedBy.toString());
-      formData.append('EmployeeDependentDetailsId', appointmentData.EmployeeDependentDetailsId.toString());
-      formData.append('EmployeeAddressDetailsId', appointmentData.EmployeeAddressDetailsId.toString());
-      formData.append('PreferredAppointmentDateTime', appointmentData.PreferredAppointmentDateTime || "");
-      formData.append('CaseLeadCompletionDateTime', appointmentData.CaseLeadCompletionDateTime || "");
+      // BACK TO JSON - Postman used JSON for this call
+      const payload = {
+        doctor_id: Number(appointmentData.DoctorId || 0)
+      };
 
-      // Handle files
-      if (!appointmentData.Files || appointmentData.Files.length === 0) {
-        const dummyFile = new File([new Blob(["dummy file"])], "dummy.txt");
-        formData.append('Files', dummyFile);
-      } else {
-        appointmentData.Files.forEach(file => formData.append('Files', file));
-      }
+      console.log("📤 [API] Sending JSON to /api/appointments/select-doctor/", payload);
 
-      console.log("📤 [API] Sending POST to /CRMSaveBookAppointmentDetails");
-
-      // Axios handles Content-Type for FormData automatically
-      const response = await api.post('/CRMSaveBookAppointmentDetails', formData);
+      const response = await api.post('/api/appointments/select-doctor/', payload);
 
       console.log("✅ [API] Response received:", response.data);
 
       const result = response.data as any;
 
-      // Check if response indicates failure
-      if (result.Success === false) {
+      // Check if response indicates failure, but ignore "Doctor & specialization selected successfully"
+      // which is actually a success message despite potential Success: false or missing flag
+      const successMessage = (result.Message || result.message || "").toLowerCase();
+      const isSuccessMessage = successMessage.includes("selected successfully") ||
+        successMessage.includes("doctor & specialization selected");
+
+      if (result.Success === false && !isSuccessMessage) {
         console.error("❌ [API] Appointment creation failed:", result.Message);
         return {
           Success: false,
@@ -245,10 +240,42 @@ export const ConsultationAPI = {
         };
       }
 
+      // Helper to safely extract CaseLeadId from various possible locations
+      const extractCaseLeadId = (res: any): string => {
+        // Log all keys to help debugging
+        try {
+          console.log("🔍 [API] Response Keys:", Object.keys(res));
+          if (res.data) console.log("🔍 [API] Nested Data Keys:", Object.keys(res.data));
+        } catch (e) { }
+
+        // Level 1 checks
+        if (res.CaseLead_Id) return res.CaseLead_Id.toString();
+        if (res.caseLead_Id) return res.caseLead_Id.toString();
+        if (res.CaseLeadId) return res.CaseLeadId.toString();
+        if (res.case_lead_id) return res.case_lead_id.toString();
+        if (res.case_id) return res.case_id.toString();
+        if (res.lead_id) return res.lead_id.toString();
+        if (res.id) return res.id.toString();
+
+        // Level 2 checks (nested data)
+        if (res.data) {
+          if (res.data.CaseLead_Id) return res.data.CaseLead_Id.toString();
+          if (res.data.case_lead_id) return res.data.case_lead_id.toString();
+          if (res.data.case_id) return res.data.case_id.toString();
+          if (res.data.lead_id) return res.data.lead_id.toString();
+          if (res.data.id) return res.data.id.toString();
+        }
+
+        return "0";
+      };
+
+      const extractedId = extractCaseLeadId(result);
+      console.log(`🔍 [API] Extracted CaseLeadId: ${extractedId} from response`, result);
+
       return {
         Success: true,
-        Message: result.Message || "Appointment booked successfully",
-        CaseLead_Id: result.CaseLead_Id || result.caseLead_Id || result.CaseLeadId || "0"
+        Message: result.Message || result.message || "Appointment booked successfully",
+        CaseLead_Id: extractedId
       };
     } catch (error: any) {
       console.error('❌ [API ERROR] Error in CRMSaveBookAppointmentDetails:', {
@@ -284,130 +311,103 @@ export const ConsultationAPI = {
       SponsoredStatus: number;
       TestPackageTypeId: number;
       CartUniqueId: number;
+      DoctorId?: number;
+      AppointmentDate?: string; // Added AppointmentDate
     }
   ): Promise<InsertCartResponse> => {
     try {
-      const payload = {
-        CaseLead_Id: appointmentData.CaseLead_Id,
-        EmployeeRefId: appointmentData.EmployeeRefId,
-        CaseFor: appointmentData.CaseFor,
-        EmployeeDependentDetailsId: appointmentData.EmployeeDependentDetailsId,
-        CaseType: appointmentData.CaseType,
-        ProductId: appointmentData.ProductId,
-        DCId: appointmentData.DCId,
-        SponsoredStatus: appointmentData.SponsoredStatus,
-        TestPackageTypeId: appointmentData.TestPackageTypeId,
-        CartUniqueId: appointmentData.CartUniqueId
+      // Converting to JSON as per user request (not using FormData)
+      // We rely on the backend Session Data for the IDs like doctor_id.
+      const fullDateTime = appointmentData.AppointmentDate || "";
+      let datePart = fullDateTime.split(' ')[0] || "";
+      let timePart = fullDateTime.split(' ').slice(1).join(' ') || "";
+
+      const isSelf = (appointmentData.CaseFor as any) === 1 || (appointmentData.CaseFor as any) === "1";
+
+      // Strict 12-hour time formatter (e.g., 08:30 PM)
+      const formatTo12Hour = (timeStr: string) => {
+        if (!timeStr) return "";
+        if (timeStr.includes('AM') || timeStr.includes('PM')) return timeStr;
+        let [h, m] = timeStr.split(':').map(Number);
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12 || 12;
+        return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} ${ampm}`;
       };
 
-      console.log("Sending appointment cart payload:", payload);
+      const payload = {
+        for_whom: isSelf ? 'self' : 'dependant',
+        appointment_date: datePart,
+        appointment_time: formatTo12Hour(timePart),
+        mode: appointmentData.ProductId === 1 ? 'video' : (appointmentData.ProductId === 2 ? 'tele' : 'clinic'),
+        symptoms: (appointmentData as any).Symptoms || "General Consultation",
+        dependant_id: !isSelf && appointmentData.EmployeeDependentDetailsId ? appointmentData.EmployeeDependentDetailsId : null
+      };
 
-      const response = await api.post('/api/appointments/cart/add/', payload);
+      console.log("📤 [API] Sending Lean JSON to /api/appointments/add-appointment-to-cart/", payload);
+
+      const response = await api.post('/api/appointments/add-appointment-to-cart/', payload);
 
       const result = response.data as any;
       console.log("Server response:", result);
 
       return {
         Success: true,
-        Message: result.Message,
-        CartDetailsId: result.CartDetailsId,
-        CartUniqueId: result.CartUniqueId
+        Message: result.Message || result.message,
+        CartDetailsId: result.CartDetailsId || result.cart_details_id,
+        CartUniqueId: result.CartUniqueId || result.cart_unique_id
       };
     } catch (error: any) {
-      console.error("Error saving appointment cart item:", error.response || error);
+      // Improved error logging to see validation errors
+      console.error("❌ [API ERROR] Error saving appointment cart item details:", {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data, // This contains the specific field errors
+        message: error.message
+      });
+
       return {
         Success: false,
-        Message: error.response?.data?.Message || error.message || "Failed to save cart item"
+        Message: JSON.stringify(error.response?.data) || error.message || "Failed to save cart item"
       };
     }
   },
 
   CRMLoadDoctorListDetails: async (specialityId: number, employeeRefId: number, districtId: number): Promise<CRMConsultationDoctorDetailsResponse[]> => {
     try {
-      // Fetch from BOTH Professional and Personal endpoints to ensure all doctors are captured
+      // User requested to use ONLY /api/doctors_details/professional/
+      // and remove the personal details endpoint.
       const params: any = {};
       if (specialityId) params.specialityId = specialityId;
       if (employeeRefId) params.employeeRefId = employeeRefId;
       if (districtId) params.city = districtId;
 
-      const [professionalResponse, personalResponse] = await Promise.all([
-        api.get('/api/doctors_details/professional/search', { params }).catch(() => ({ data: [] })),
-        api.get('/api/doctors_details/personal/').catch(() => ({ data: [] }))
-      ]);
+      console.log("🚀 [API] Fetching Doctors from /api/doctors_details/professional/", params);
 
-      console.log("Professional Response:", professionalResponse.data);
-      console.log("Personal Response:", personalResponse.data);
+      const response = await api.get('/api/doctors_details/professional/', { params });
 
-      // Extract professional doctors
-      let professionalData: any[] = [];
-      const profData: any = professionalResponse.data;
-      if (Array.isArray(profData)) {
-        professionalData = profData;
-      } else if (profData && Array.isArray(profData.data)) {
-        professionalData = profData.data;
-      } else if (profData && Array.isArray(profData.results)) {
-        professionalData = profData.results;
+      console.log("Doctors Raw Response:", response.data);
+
+      let rawData: any[] = [];
+      const resData: any = response.data;
+      if (Array.isArray(resData)) {
+        rawData = resData;
+      } else if (resData && Array.isArray(resData.data)) {
+        rawData = resData.data;
+      } else if (resData && Array.isArray(resData.results)) {
+        rawData = resData.results;
       }
 
-      // Extract personal doctors
-      let personalData: any[] = [];
-      const persData: any = personalResponse.data;
-      if (Array.isArray(persData)) {
-        personalData = persData;
-      } else if (persData && Array.isArray(persData.data)) {
-        personalData = persData.data;
-      } else if (persData && Array.isArray(persData.results)) {
-        personalData = persData.results;
-      }
-
-      // Create a map of professional doctors by ID for quick lookup
-      const professionalMap = new Map<number, any>();
-      professionalData.forEach(doc => {
-        const id = doc.id || doc.doctor;
-        if (id) professionalMap.set(id, doc);
-      });
-
-      // Collect all unique doctor IDs from both sources
-      const allDoctorIds = new Set<number>();
-      professionalData.forEach(doc => {
-        const id = doc.id || doc.doctor;
-        if (id) allDoctorIds.add(id);
-      });
-      personalData.forEach(doc => {
-        if (doc.id) allDoctorIds.add(doc.id);
-      });
-
-      // Merge: For each doctor ID, prefer professional data if available, otherwise use personal
-      const rawData: any[] = [];
-      allDoctorIds.forEach(id => {
-        const professionalDoc = professionalMap.get(id);
-        const personalDoc = personalData.find(d => d.id === id);
-
-        // Prefer professional data (more complete), fallback to personal
-        if (professionalDoc) {
-          rawData.push(professionalDoc);
-        } else if (personalDoc) {
-          rawData.push(personalDoc);
-        }
-      });
-
-      console.log(`✅ [API] Fetched ${rawData.length} doctors from backend (${professionalData.length} professional, ${personalData.length} personal)`);
+      console.log(`✅ [API] Fetched ${rawData.length} doctors from professional endpoint`);
 
       // Validate that we only have real doctors from backend
-      // Also filtering out known test data like "Dr. Hari" as requested
+      // RELAXED FILTER: Show everything returned by the professional API
       const validDoctors = rawData.filter(item => {
+        // Just ensure it has an ID
         const hasId = item.id || item.DoctorId;
-        const name = item.name || item.Name || item.DoctorName || "";
-        const isExcluded = name.includes("Dr. Hari") || name === "Doctor";
-        return hasId && !isExcluded;
+        return hasId;
       });
-      const invalidCount = rawData.length - validDoctors.length;
-      if (invalidCount > 0) {
-        console.warn(`⚠️ [API] Filtered out ${invalidCount} doctors without valid IDs`);
-      }
 
-
-      // Map ONLY valid backend doctors to frontend interface
+      // Map doctors to frontend interface
       const mappedData = validDoctors.map((item: any) => {
         let vendorName = "";
         if (item.vendor && typeof item.vendor === 'object') {
@@ -437,41 +437,40 @@ export const ConsultationAPI = {
         }
         else if (typeof item.specialization === 'string') {
           specName = item.specialization;
-          specIds = item.specialization; // Fallback to name if not array
-        }
-        else if (typeof item.specialization === 'object' && item.specialization !== null) {
-          specName = item.specialization.name || item.specialization.Name || "";
-          specIds = (item.specialization.id || item.specialization.Id || "").toString();
+          specIds = item.specialization; // Fallback
         }
 
-        const mappedDoc = {
-          DoctorId: item.id || item.DoctorId,
+        // Map qualification
+        let qualification = "";
+        if (Array.isArray(item.qualification)) {
+          // Mapping based on user provided JSON: item.qualification is just a string "MBBS", but if it were an array
+          // The current user JSON shows "qualification": "MBBS" directly.
+          // But keeping array check just in case.
+          qualification = item.qualification.map((q: any) => q.name || q.qualification || q).join(", ");
+        } else if (typeof item.qualification === 'string') {
+          qualification = item.qualification;
+        }
+
+        // Map languages
+        let language = "";
+        if (Array.isArray(item.language)) {
+          // Backend returns array of objects: [{id: 1, name: "English", ...}, ...]
+          language = item.language.map((l: any) => l.name || l.language || l.LanguageDescription || "").filter(Boolean).join(", ");
+        } else if (typeof item.language === 'string') {
+          language = item.language;
+        }
+
+        // Map fees (Backend returns string "1500.00")
+        const fees = item.consultation_fee ? parseFloat(item.consultation_fee) : 0; // Convert string to number
+
+        // Construct final object
+        return {
+          DoctorId: item.id || item.doctor || item.DoctorId,
           DoctorName: docName,
-          Experience: item.experience_years?.toString() || item.Experience?.toString() || "",
-          Experience1: item.experience_years || item.Experience || 0,
-          Age: item.age || item.Age || 0,
-          DOB: item.dob || item.DOB || "",
-
-          // Map Specializations
-          Specialization: specName || item.Specialization || "General Physician",
-          DoctorSpecializations: specIds || item.DoctorSpecializations || "",
-
-          // Map Languages
-          Language: item.language ? (Array.isArray(item.language) ? item.language.map((l: any) => typeof l === 'object' ? l.name : l).join(", ") : item.language) : (item.Language || ""),
-
-          // Map Location/Address
-          CityName: item.city_name || item.CityName || "India",
-          Address: item.address || item.clinic_address || item.Address || "",
-          Pincode: item.clinic_address || item.Pincode || "",
-
-          // Map Vendor/Doctor Type
+          DoctorDetails: item.bio || item.details || item.DoctorDetails || "",
+          DoctorMobileNumber: item.mobile_no || item.DoctorMobileNumber || "",
+          DoctorEmailId: item.email || item.DoctorEmailId || "",
           DoctorTypeDescription: vendorName || item.DoctorTypeDescription || "Welleazy",
-          DoctorTypeId: (item.vendor && item.vendor.id) ? item.vendor.id : (item.DoctorTypeId || 0),
-
-          // Map Fees
-          Fee: item.consultation_fee || item.Fee || "0",
-
-          // Map Other details
           DoctorRegistrationId: item.license_number || item.DoctorRegistrationId || "",
           ConsultationMode: item.e_consultation ? "Video Consultation" : (item.in_clinic ? "In-Clinic" : (item.ConsultationMode || "")),
 
@@ -486,7 +485,8 @@ export const ConsultationAPI = {
             (item.in_clinic || vendorName === "Apollo" || vendorName === "Appolo") ? "In-Person Consultation" : "",
             item.service || item.Service || ""
           ].filter(Boolean).join(", ") || (item.Service || "Consultation"),
-          Qualification: item.qualification || item.Qualification || "",
+          Qualification: qualification || item.Qualification || "",
+          Language: language || item.Language || "English",
           DistrictId: districtId || item.DistrictId || 0,
           FromTime: "",
           ToTime: "",
@@ -495,14 +495,13 @@ export const ConsultationAPI = {
           ClinicName: item.clinic_name || item.ClinicName || "",
           DCUniqueName: vendorName || item.DCUniqueName || "Welleazy",
           DoctorURL: "",
+          ConsultationFees: fees // Mapping the fee correctly
         };
-
-        return mappedDoc;
       });
 
       console.log(`✅ [API] Returning ${mappedData.length} valid doctors to display`);
       console.log("📋 [API] Sample doctor data:", mappedData.slice(0, 2));
-      return mappedData as CRMConsultationDoctorDetailsResponse[];
+      return mappedData as unknown as CRMConsultationDoctorDetailsResponse[];
     } catch (err: any) {
       console.error("Error fetching doctor details:", err);
       return [];
@@ -597,7 +596,10 @@ export const ConsultationAPI = {
 
   CRMLoadApolloClinics: async (doctorId: number, DoctorTypeDescription: string): Promise<ApolloClinic[]> => {
     try {
-      const response = await api.get(`/CRMLoadApolloClinics/${doctorId}/${DoctorTypeDescription}`);
+      const url = `/CRMLoadApolloClinics/${doctorId}/${DoctorTypeDescription}`;
+      console.log(`📡 [API] Requesting Apollo Clinics: ${url}`);
+      const response = await api.get(url);
+      console.log(`✅ [API] Clinics Response:`, response.data);
       return response.data as ApolloClinic[];
     } catch (error: any) {
       console.error('Error loading Apollo clinics:', error.response || error);
@@ -615,6 +617,105 @@ export const ConsultationAPI = {
       return response.data as ApolloDoctorSlotsApiResponse;
     } catch (error: any) {
       console.error('Error loading Apollo doctor slots:', error.response || error);
+      throw error;
+    }
+  },
+
+  // Added new function for filtering doctors by language
+  GetDoctorsByLanguage: async (language: string): Promise<CRMConsultationDoctorDetailsResponse[]> => {
+    try {
+      console.log(`🔍 [API] Fetching doctors for language: ${language}`);
+      const response = await api.get('/api/doctors_details/professional/search', {
+        params: { language: language }
+      });
+      console.log("✅ [API] Data received:", response.data);
+
+      let rawData: any[] = [];
+      const data: any = response.data;
+
+      // Robust data extraction
+      if (Array.isArray(data)) {
+        rawData = data;
+      } else if (data && Array.isArray(data.data)) {
+        rawData = data.data;
+      } else if (data && Array.isArray(data.results)) {
+        rawData = data.results;
+      }
+
+      // Filter out dummy data
+      rawData = rawData.filter(item => {
+        const name = item.name || item.Name || item.full_name || item.DoctorName || "";
+        const normalize = (str: string) => str.toLowerCase().replace(/[.,\s]/g, '');
+        const normalizedName = normalize(name);
+        return !normalizedName.includes("drhari") && name !== "Doctor";
+      });
+
+      // Map to frontend interface
+      const mappedData = rawData.map((item: any) => {
+        let vendorName = "";
+        if (item.vendor && typeof item.vendor === 'object') {
+          vendorName = item.vendor.name || item.vendor.Name || "";
+        } else if (typeof item.vendor === 'string') {
+          vendorName = item.vendor;
+        }
+
+        // Handle name variations
+        const docName = item.name || item.Name || item.full_name || item.DoctorName || "Doctor";
+
+        // Handle specialization mapping
+        let specName = "General Physician";
+        let specIds = "";
+
+        if (Array.isArray(item.specialization) && item.specialization.length > 0) {
+          if (typeof item.specialization[0] === 'object') {
+            specName = item.specialization[0].name || "";
+            specIds = item.specialization.map((s: any) => s.id).join(",");
+          } else {
+            specName = String(item.specialization[0]);
+            specIds = item.specialization.join(",");
+          }
+        }
+
+        return {
+          DoctorId: item.id || item.doctor || item.DoctorId,
+          DoctorName: docName,
+          Experience: item.experience_years?.toString() || item.Experience?.toString() || "",
+          Experience1: item.experience_years || 0,
+          Age: item.age || 0,
+          DOB: item.dob || "",
+          Specialization: specName,
+          DoctorSpecializations: specIds,
+          Language: item.language ? (Array.isArray(item.language) ? item.language.map((l: any) => typeof l === 'object' ? l.name : l).join(", ") : item.language) : "",
+          CityName: item.city_name || "India",
+          Address: item.address || item.clinic_address || "",
+          Pincode: item.clinic_address || "",
+          DoctorTypeDescription: "Welleazy",
+          DoctorTypeId: (item.vendor && item.vendor.id) ? item.vendor.id : 0,
+          Fee: item.consultation_fee || "0",
+          DoctorRegistrationId: item.license_number || "",
+          ConsultationMode: item.e_consultation ? "Video Consultation" : "In-Clinic",
+          DoctorImage: item.profile_photo || item.image || null,
+          VendorImageUrl: "",
+          DoctorImageUrl: item.image || "",
+          ServiceProvider: "",
+          EmpanelFor: "",
+          Service: item.service || "Consultation", // Default to "Consultation" if not provided
+          Qualification: item.qualification || "",
+          DistrictId: 0,
+          FromTime: "",
+          ToTime: "",
+          ConsultationCount: 0,
+          ClinicId: item.clinic_id || 0,
+          ClinicName: item.clinic_name || "",
+          DCUniqueName: vendorName || "Welleazy", // Important for TimeSlot API
+          DoctorURL: "",
+          ConsultationFees: item.consultation_fee ? parseFloat(item.consultation_fee) : 0,
+        };
+      }) as CRMConsultationDoctorDetailsResponse[];
+
+      return mappedData;
+    } catch (error: any) {
+      console.error('❌ [API ERROR] Error loading doctors by language:', error.response || error);
       throw error;
     }
   },
